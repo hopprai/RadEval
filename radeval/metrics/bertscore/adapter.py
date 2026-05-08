@@ -13,6 +13,10 @@ class BertScoreMetric(MetricBase):
     def metric_keys(self, detailed=False):
         return ["bertscore"]
 
+    def progress_total(self, n):
+        import math
+        return math.ceil(n / self._scorer.batch_size)
+
     def _compute_raw(self, refs, hyps, on_progress=None):
         mean_f1, sample_scores = self._scorer(
             refs, hyps, on_batch_done=on_progress)

@@ -122,7 +122,8 @@ class RadEval:
                                 description=f"Computing {metric.display_name}")
 
                 sub_task = progress.add_task(
-                    f"  [dim]{metric.display_name}", total=n)
+                    f"  [dim]{metric.display_name}",
+                    total=metric.progress_total(n))
 
                 result = metric.compute(
                     refs, hyps,
@@ -131,7 +132,7 @@ class RadEval:
                     on_progress=lambda _st=sub_task: progress.advance(_st),
                 )
 
-                progress.update(sub_task, completed=n)
+                progress.update(sub_task, completed=metric.progress_total(n))
                 progress.remove_task(sub_task)
                 scores.update(result)
                 progress.advance(metric_task)

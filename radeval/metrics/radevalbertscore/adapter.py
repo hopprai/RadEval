@@ -16,6 +16,10 @@ class RadEvalBertScoreMetric(MetricBase):
     def metric_keys(self, detailed=False):
         return ["radeval_bertscore"]
 
+    def progress_total(self, n):
+        import math
+        return math.ceil(n / self._scorer.batch_size)
+
     def _compute_raw(self, refs, hyps, on_progress=None):
         mean_f1, f1_tensor = self._scorer.score(
             refs=refs, hyps=hyps, on_batch_done=on_progress)
