@@ -23,6 +23,21 @@ class MetricBase(ABC):
         """Return output keys this metric produces in the given mode."""
         ...
 
+    def progress_total(self, n: int) -> int:
+        """Return the expected number of ``on_progress`` advances for ``n`` samples.
+
+        The default (``n``) is correct for metrics that advance once per sample
+        (i.e. wire ``on_sample_done=on_progress`` into their scorer).
+
+        Metrics whose scorer reports progress once per *batch* (i.e. wire
+        ``on_batch_done=on_progress``) should override this to return
+        ``num_batches`` (or ``2 * num_batches`` when the scorer makes two passes
+        over the inputs, e.g. one for ``hyps`` and one for ``refs``), otherwise
+        the progress bar will appear to crawl because each advance covers
+        ``batch_size`` samples but the bar total is measured in samples.
+        """
+        return n
+
     def compute(self, refs, hyps, per_sample=False, detailed=False,
                 on_progress=None) -> dict[str, Any]:
         """Public entry point.

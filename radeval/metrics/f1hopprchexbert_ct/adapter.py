@@ -19,6 +19,11 @@ class F1HopprCheXbertCTMetric(MetricBase):
             "f1hopprchexbert_ct_macro_f1", "f1hopprchexbert_ct_weighted_f1",
         ]
 
+    def progress_total(self, n):
+        import math
+        bs = self._scorer.batch_size
+        return 2 * math.ceil(n / bs)  # one pass over hyps + one over refs
+
     def compute(self, refs, hyps, per_sample=False, detailed=False,
                 on_progress=None):
         """Override: per_sample mode returns different keys than default."""
