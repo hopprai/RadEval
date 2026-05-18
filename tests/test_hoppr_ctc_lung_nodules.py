@@ -352,6 +352,31 @@ class TestIntegration:
         # Per-bucket KPIs are surfaced by the adapter.
         assert "hoppr_ctc_lung_nodules_sensitivity_6to8" in out
         assert out["hoppr_ctc_lung_nodules_sensitivity_6to8"] == 1.0
+        # Every aggregate KPI now carries a `_support` companion key
+        # (n_studies is itself the population denominator and has none).
+        for k in [
+            "hoppr_ctc_lung_nodules_detection_f1_support",
+            "hoppr_ctc_lung_nodules_composite_support",
+            "hoppr_ctc_lung_nodules_sensitivity_6to8_support",
+            "hoppr_ctc_lung_nodules_fp_per_study_6to8_support",
+            "hoppr_ctc_lung_nodules_diameter_mae_6to8_support",
+            "hoppr_ctc_lung_nodules_diameter_mape_gt8_support",
+            "hoppr_ctc_lung_nodules_density_acc_solid_support",
+            "hoppr_ctc_lung_nodules_density_acc_subsolid_support",
+            "hoppr_ctc_lung_nodules_calcified_accuracy_support",
+            "hoppr_ctc_lung_nodules_laterality_accuracy_support",
+            "hoppr_ctc_lung_nodules_lobe_accuracy_support",
+        ]:
+            assert k in out, f"missing support key {k}"
+        # Supports are integers and match the underlying counts.
+        # The perfect-match scenario has 1 study, 1 TP in 6to8 bucket,
+        # both sides solid -> density_acc_solid support = 1.
+        assert isinstance(out["hoppr_ctc_lung_nodules_sensitivity_6to8_support"], int)
+        assert out["hoppr_ctc_lung_nodules_sensitivity_6to8_support"] == 1
+        assert out["hoppr_ctc_lung_nodules_fp_per_study_6to8_support"] == 1
+        assert out["hoppr_ctc_lung_nodules_density_acc_solid_support"] == 1
+        # `n_studies` itself has no _support companion.
+        assert "hoppr_ctc_lung_nodules_n_studies_support" not in out
         assert out["hoppr_ctc_lung_nodules_fp_per_study_6to8"] == 0.0
 
     def test_adapter_per_sample_mode(self, mock_openai_client):
@@ -367,6 +392,10 @@ class TestIntegration:
                              per_sample=True, detailed=False)
         assert isinstance(out["hoppr_ctc_lung_nodules_composite"], list)
         assert out["hoppr_ctc_lung_nodules_composite"] == [1.0]
+        # Per-sample mode also emits `_support` indicator lists (1 = row
+        # contributed to the corpus aggregate, 0 = per-row rate undefined).
+        assert "hoppr_ctc_lung_nodules_composite_support" in out
+        assert out["hoppr_ctc_lung_nodules_composite_support"] == [1]
 
     def test_adapter_detailed_mode(self, mock_openai_client):
         from radeval.metrics.hoppr_ctc_lung_nodules.adapter import HopprCTCLungNodulesMetric
