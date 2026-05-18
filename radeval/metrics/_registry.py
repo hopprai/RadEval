@@ -27,7 +27,7 @@ METRIC_REGISTRY: dict[str, tuple[str, str]] = {
     "f1hopprchexbert_msk": ("radeval.metrics.f1hopprchexbert_msk.adapter", "F1HopprCheXbertMSKMetric"),
     "f1hopprchexbert_abd": ("radeval.metrics.f1hopprchexbert_abd.adapter", "F1HopprCheXbertAbdMetric"),
     "hoppr_crimson_ct":    ("radeval.metrics.hoppr_crimson_ct.adapter",    "HopprCrimsonCTMetric"),
-    "nodule_eval":         ("radeval.metrics.nodule_eval.adapter",         "NoduleEvalMetric"),
+    "hoppr_ctc_lung_nodules": ("radeval.metrics.hoppr_ctc_lung_nodules.adapter", "HopprCTCLungNodulesMetric"),
     # --- END PRIVATE METRICS ---
 }
 

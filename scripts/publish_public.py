@@ -40,7 +40,7 @@ PRIVATE_METRICS = [
     "f1hopprchexbert_msk",
     "f1hopprchexbert_abd",
     "hoppr_crimson_ct",
-    "nodule_eval",
+    "hoppr_ctc_lung_nodules",
 ]
 
 PRIVATE_DIRS = ["scripts", ".cursor", "docs/changelog", "plan"]
@@ -50,6 +50,8 @@ PRIVATE_FILES = [
     "pred_ref_epoch37_seed476104_val.jsonl",
     "run_main_ct.py",
     "run_main_cxr.py",
+    "run_main_msk.py",
+    "run_main_hoppr_ctc_lung_nodules.py",
     "run_main.py",
     "cmd",
 ]
@@ -61,8 +63,8 @@ LEAK_PATTERNS = [
     "HopprF1CheXbert",
     "HopprCrimsonCT",
     "CRIMSON_CT",
-    "nodule_eval",
-    "NoduleEval",
+    "hoppr_ctc_lung_nodules",
+    "HopprCTCLungNodules",
 ]
 
 # Files on the PUBLIC repo that legitimately mention private metric class names
