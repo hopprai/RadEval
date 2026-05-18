@@ -150,6 +150,51 @@ class TestUnit:
         cf = "LUNGS AND AIRWAYS: Clear. MEDIASTINUM: No adenopathy."
         assert extract_pn_segment(cf) == ""
 
+    def test_canonicalize_orders_by_laterality_lobe_size(self):
+        from radeval.metrics.hoppr_ctc_lung_nodules.utils import canonicalize_pn_segment
+        seg = (
+            "There is a 25 mm mass in the left lower lobe. "
+            "There is a 4 mm solid nodule in the right upper lobe. "
+            "There is a 12 mm calcified nodule in the left upper lobe. "
+            "There is a 6 mm ground-glass nodule in the right lower lobe."
+        )
+        out = canonicalize_pn_segment(seg)
+        # right-side nodules come first (RUL, then RLL), then left-side.
+        assert out.index("right upper lobe") < out.index("right lower lobe")
+        assert out.index("right lower lobe") < out.index("left upper lobe")
+        assert out.index("left upper lobe") < out.index("left lower lobe")
+
+    def test_canonicalize_invariant_to_input_order(self):
+        from radeval.metrics.hoppr_ctc_lung_nodules.utils import canonicalize_pn_segment
+        sentences = [
+            "There is a 4 mm solid nodule in the right upper lobe.",
+            "There is a 6 mm ground-glass nodule in the right lower lobe.",
+            "There is a 12 mm calcified nodule in the left upper lobe.",
+            "There is a 25 mm mass in the left lower lobe.",
+        ]
+        canonical = canonicalize_pn_segment(" ".join(sentences))
+        for perm in [
+            sentences[::-1],
+            [sentences[2], sentences[0], sentences[3], sentences[1]],
+            [sentences[3], sentences[1], sentences[2], sentences[0]],
+        ]:
+            assert canonicalize_pn_segment(" ".join(perm)) == canonical
+
+    def test_canonicalize_handles_size_within_same_lobe(self):
+        from radeval.metrics.hoppr_ctc_lung_nodules.utils import canonicalize_pn_segment
+        seg = (
+            "There is a 7 mm nodule in the right upper lobe. "
+            "There is a 3 mm nodule in the right upper lobe."
+        )
+        out = canonicalize_pn_segment(seg)
+        # 3 mm should come before 7 mm at the same lobe.
+        assert out.index("3 mm") < out.index("7 mm")
+
+    def test_canonicalize_empty(self):
+        from radeval.metrics.hoppr_ctc_lung_nodules.utils import canonicalize_pn_segment
+        assert canonicalize_pn_segment("") == ""
+        assert canonicalize_pn_segment("   ") == ""
+
     def test_scoring_perfect_match(self):
         from radeval.metrics.hoppr_ctc_lung_nodules.utils import compute_per_row_metrics
         m = compute_per_row_metrics(_RESP_PERFECT)

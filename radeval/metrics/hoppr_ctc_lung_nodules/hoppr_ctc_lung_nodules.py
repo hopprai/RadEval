@@ -33,6 +33,7 @@ from .._llm_base import LLMMetricBase
 from .prompt_parts import SYSTEM_MSG, build_prompt
 from .utils import (
     SIZE_BUCKETS,
+    canonicalize_pn_segment,
     compute_per_row_metrics,
     empty_row_result,
     extract_pn_segment,
@@ -158,10 +159,12 @@ class HopprCTCLungNodulesScore(LLMMetricBase):
         """Build the provider-specific request payload.
 
         ref and hyp are full clean_findings strings; we extract the
-        PULMONARY NODULES segment before prompting.
+        PULMONARY NODULES segment and canonicalize sentence order before
+        prompting so the judge sees the same input regardless of how the
+        source text ordered the nodules.
         """
-        ref_pn = extract_pn_segment(ref)
-        hyp_pn = extract_pn_segment(hyp)
+        ref_pn = canonicalize_pn_segment(extract_pn_segment(ref))
+        hyp_pn = canonicalize_pn_segment(extract_pn_segment(hyp))
         prompt = build_prompt(ref_pn, hyp_pn)
 
         if self.provider == "openai":

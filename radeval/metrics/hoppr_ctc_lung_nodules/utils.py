@@ -66,6 +66,147 @@ def extract_pn_segment(clean_findings: str) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Canonical sentence ordering
+# ---------------------------------------------------------------------------
+#
+# The LLM judge is mostly order-invariant on clean inputs but can make
+# different one-to-one matching choices when the predicted nodule list is
+# reordered (observed empirically — see tests). We normalize both reference
+# and predicted nodule sentences into a canonical order before prompting so
+# the judge sees the same input regardless of how the source text wrote it.
+# Order key: (laterality, lobe, size, raw text). Sentences that don't match
+# the simple `There is/are ... nodule|mass in the ...` shape fall through to
+# a stable trailing block in original order.
+
+_LATERALITY_ORDER: dict[str, int] = {
+    "right": 0,
+    "left": 1,
+    "bilateral": 2,
+    "unspecified": 3,
+}
+
+_LOBE_ORDER: list[tuple[str, str]] = [
+    # (substring to match, lobe key)
+    ("right upper lobe", "right upper lobe"),
+    ("right middle lobe", "right middle lobe"),
+    ("right lower lobe", "right lower lobe"),
+    ("right lung",       "right lung"),
+    ("left upper lobe",  "left upper lobe"),
+    ("lingula",          "lingula"),
+    ("left lower lobe",  "left lower lobe"),
+    ("left lung",        "left lung"),
+    ("bilateral lungs",  "bilateral lungs"),
+    ("lung",             "lung"),
+]
+_LOBE_RANK: dict[str, int] = {key: i for i, (_, key) in enumerate(_LOBE_ORDER)}
+_LOBE_RANK["unspecified"] = len(_LOBE_RANK)
+
+
+def _laterality_from_lobe(lobe: str) -> str:
+    if lobe in ("right upper lobe", "right middle lobe",
+                "right lower lobe", "right lung"):
+        return "right"
+    if lobe in ("left upper lobe", "lingula",
+                "left lower lobe", "left lung"):
+        return "left"
+    if lobe == "bilateral lungs":
+        return "bilateral"
+    return "unspecified"
+
+
+_SIZE_RE = re.compile(r"(\d+(?:\.\d+)?)\s*(mm|cm)\b", re.IGNORECASE)
+
+
+def _largest_size_mm(sentence: str) -> Optional[float]:
+    """Largest numeric size mentioned in the sentence, in mm. None if absent.
+
+    For multi-dim phrases like "1.6 x 13 mm", returns the largest dimension
+    expressed in the same unit. cm values are converted to mm.
+    """
+    best: Optional[float] = None
+    for m in _SIZE_RE.finditer(sentence):
+        value = float(m.group(1))
+        if m.group(2).lower() == "cm":
+            value *= 10.0
+        if best is None or value > best:
+            best = value
+    return best
+
+
+_NODULE_SHAPE_RE = re.compile(r"\bnodul|\bmass\b", re.IGNORECASE)
+
+
+def _split_sentences(segment: str) -> list[str]:
+    """Split on sentence-ending punctuation followed by whitespace, keeping
+    the punctuation. Returns a list of trimmed sentences with a trailing
+    period restored.
+    """
+    if not segment:
+        return []
+    parts = re.split(r"(?<=[.!?])\s+", segment.strip())
+    cleaned: list[str] = []
+    for s in parts:
+        s = s.strip()
+        if not s:
+            continue
+        if not s.endswith((".", "!", "?")):
+            s = s + "."
+        cleaned.append(s)
+    return cleaned
+
+
+def _sort_key(sentence: str, idx: int) -> tuple:
+    """Build a deterministic sort key for a single nodule sentence.
+
+    The key is (is_other, laterality_rank, lobe_rank, size_or_inf,
+    sentence_lower, idx). `is_other` is 1 for sentences that don't look
+    like a nodule sentence (e.g. summary statements) so they trail
+    naturally without disrupting the canonical order.
+    """
+    s_low = sentence.lower()
+    is_other = 0 if _NODULE_SHAPE_RE.search(s_low) else 1
+
+    lobe = "unspecified"
+    for substr, key in _LOBE_ORDER:
+        if substr in s_low:
+            lobe = key
+            break
+    laterality = _laterality_from_lobe(lobe)
+    size_mm = _largest_size_mm(sentence)
+    size_or_inf = size_mm if size_mm is not None else float("inf")
+    return (
+        is_other,
+        _LATERALITY_ORDER[laterality],
+        _LOBE_RANK[lobe],
+        size_or_inf,
+        s_low,
+        idx,
+    )
+
+
+def canonicalize_pn_segment(segment: str) -> str:
+    """Sort nodule sentences into a canonical order.
+
+    Order: laterality (right < left < bilateral < unspecified), then lobe
+    (RUL < RML < RLL < right lung < LUL < lingula < LLL < left lung <
+    bilateral lungs < lung), then size ascending in mm (None last), then
+    case-folded sentence text, then original index. Sentences that do not
+    look like nodule statements (no `nodule` / `mass`) trail in original
+    order.
+
+    Returns the canonicalized segment as a single space-joined string.
+    Empty input -> "".
+    """
+    sentences = _split_sentences(segment)
+    if not sentences:
+        return ""
+    indexed = list(enumerate(sentences))
+    indexed.sort(key=lambda pair: _sort_key(pair[1], pair[0]))
+    return " ".join(s for _, s in indexed)
+
+
+
+# ---------------------------------------------------------------------------
 # JSON cleanup / validation
 # ---------------------------------------------------------------------------
 
