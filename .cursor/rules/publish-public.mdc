@@ -50,7 +50,25 @@ Always build from the PUBLIC repo, never from hopprai/RadEval.
 ```bash
 # After publish_public.py --push:
 cd /tmp && git clone --depth 1 https://github.com/jbdel/RadEval.git radeval_pypi
-cd radeval_pypi && python -m build --sdist
+cd radeval_pypi && python -m build --sdist --wheel
+
+# Verify required data files are present in the wheel before uploading.
+python -c "
+import zipfile, sys, glob
+whl = sorted(glob.glob('dist/*.whl'))[-1]
+contents = zipfile.ZipFile(whl).namelist()
+required = [
+    'radeval/metrics/radfact_ct/prompts/ct/report_to_phrases_system.txt',
+    'radeval/metrics/radfact_ct/prompts/ct/nli_system.txt',
+    'radeval/metrics/radfact_ct/prompts/ct/negative_filtering_system.txt',
+    'radeval/metrics/bertscore/_vendor/rescale_baseline/en/microsoft/deberta-base.tsv',
+]
+missing = [f for f in required if f not in contents]
+if missing:
+    print('ERROR: missing from wheel:', missing); sys.exit(1)
+print('Wheel artifact check passed.')
+"
+
 TWINE_USERNAME=__token__ TWINE_PASSWORD="<token from scripts/pypi>" twine upload dist/*
 rm -rf /tmp/radeval_pypi
 ```
