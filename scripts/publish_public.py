@@ -37,6 +37,7 @@ PUBLIC_REMOTE = "https://github.com/jbdel/RadEval.git"
 PRIVATE_METRICS = [
     "f1hopprchexbert",
     "f1hopprchexbert_ct",
+    "f1hopprchexbert_cth",
     "f1hopprchexbert_msk",
     "f1hopprchexbert_abd",
     "hoppr_crimson_ct",
