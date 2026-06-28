@@ -25,6 +25,7 @@ METRIC_REGISTRY: dict[str, tuple[str, str]] = {
     "f1hopprchexbert":     ("radeval.metrics.f1hopprchexbert.adapter",     "F1HopprCheXbertMetric"),
     "f1hopprchexbert_ct":  ("radeval.metrics.f1hopprchexbert_ct.adapter",  "F1HopprCheXbertCTMetric"),
     "f1hopprchexbert_cth": ("radeval.metrics.f1hopprchexbert_cth.adapter", "F1HopprCheXbertCTHMetric"),
+    "f1hoppr_cth_rrg_lv001_cls_lv003": ("radeval.metrics.f1hoppr_cth_rrg_lv001_cls_lv003.adapter", "F1HopprCthRrgLv001ClsLv003Metric"),
     "f1hoppr_msk_rrg_lv005_cls_lv009": ("radeval.metrics.f1hoppr_msk_rrg_lv005_cls_lv009.adapter", "F1HopprMskRrgLv005ClsLv009Metric"),
     "f1hopprchexbert_msk": ("radeval.metrics.f1hopprchexbert_msk.adapter", "F1HopprCheXbertMSKMetric"),
     "f1hopprchexbert_abd": ("radeval.metrics.f1hopprchexbert_abd.adapter", "F1HopprCheXbertAbdMetric"),
