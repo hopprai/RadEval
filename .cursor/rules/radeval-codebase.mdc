@@ -34,6 +34,7 @@ RadEval/
     f1Radbert_ct/         # CT multi-label classification (18 labels)
     f1hopprchexbert_ct/   # PRIVATE — CT multi-output ModernBERT-large (16 conditions)
     f1hopprchexbert_cth/  # PRIVATE — CT-head multi-output ModernBERT-large (10 findings, 3-class)
+    f1hoppr_msk_rrg_lv005_cls_lv009/  # PRIVATE — full-body MSK multi-output ModernBERT-large (26 findings, 3-class)
     f1hopprchexbert_msk/  # PRIVATE — MSK multi-output ModernBERT-large (20 conditions)
     f1hopprchexbert_abd/  # PRIVATE — Abdomen multi-output ModernBERT-large (13 conditions)
     green_score/          # GREEN + MammoGREEN
@@ -82,6 +83,12 @@ tests/
 - Metric names (registry keys, folder names): `<snake_case>` — e.g. `f1chexbert`, `srrbert`, `radfact_ct`
 - Output keys: **snake_case only** — no spaces, no hyphens
 - F1-based classifiers get `f1` prefix: `f1chexbert`, `f1hopprchexbert`, `f1radbert_ct`
+- **Hoppr text-classifier metrics (current convention):** `f1hoppr_<rrg_version>_<cls_version>`,
+  encoding the two data-registry inputs the classifier was trained on (mirrors the
+  `text_classifiers` config name). E.g. `f1hoppr_msk_rrg_lv005_cls_lv009`. A new
+  registry version => a new metric name. Class names are PascalCase of the metric
+  (`HopprF1MskRrgLv005ClsLv009` / `F1HopprMskRrgLv005ClsLv009Metric`). The older
+  `f1hopprchexbert_*` (ct/cth/msk/abd) names are historical — keep them, do not rename.
 - Compound proper nouns stay as one word: `srrbert`, `bertscore`, `ratescore`
 - Output mode args on `RadEval.__init__`: `per_sample` and `detailed` (booleans)
 
@@ -119,5 +126,7 @@ regenerated and kept in sync.
 - HopprCheXbert CXR: `/fss/pranta_das/CheXbert/expermints_folder/25507/checkpoint_2.pth`
 - HopprF1CheXbertCT: `/nfs/cluster/hoppr_vlm_ressources/radeval_checkpoints/hoppr_f1chexbert_ct/`
 - HopprF1CheXbertCTH: `/nfs/cluster/hoppr_vlm_ressources/radeval_checkpoints/f1hopprchexbert_cth/` (10 CT-head findings, 3-class: absent / present / uncertain; positive = present or uncertain)
+- HopprF1CthRrgLv001ClsLv003: `/nfs/cluster/hoppr_vlm_ressources/radeval_checkpoints/f1hoppr_cth_rrg_lv001_cls_lv003/` (same model as f1hopprchexbert_cth, renamed under the f1hoppr_<rrg>_<cls> convention; trained on cth_rrg_lv001 + cth_cls_lv003)
+- HopprF1MskRrgLv005ClsLv009: `/nfs/cluster/hoppr_vlm_ressources/radeval_checkpoints/f1hoppr_msk_rrg_lv005_cls_lv009/` (26 full-body MSK findings, 3-class; positive = present or uncertain; trained on msk_rrg_lv005 + msk_cls_lv009, prevalence-subsampled 3.04M -> 750K)
 - HopprF1CheXbertMSK: `/nfs/cluster/hoppr_vlm_ressources/radeval_checkpoints/f1hopprchexbert_msk/`
 - HopprF1CheXbertAbd: `/nfs/cluster/hoppr_vlm_ressources/radeval_checkpoints/f1hopprchexbert_abd/`

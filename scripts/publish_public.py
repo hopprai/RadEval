@@ -40,6 +40,8 @@ PRIVATE_METRICS = [
     "f1hopprchexbert_cth",
     "f1hopprchexbert_msk",
     "f1hopprchexbert_abd",
+    "f1hoppr_cth_rrg_lv001_cls_lv003",
+    "f1hoppr_msk_rrg_lv005_cls_lv009",
     "hoppr_crimson_ct",
     "hoppr_ctc_lung_nodules",
 ]
@@ -60,6 +62,8 @@ PRIVATE_FILES = [
 # Strings that must not appear anywhere in the stripped tree.
 LEAK_PATTERNS = [
     "f1hopprchexbert",
+    "f1hoppr_",
+    "HopprF1",
     "hoppr_crimson_ct",
     "HopprF1CheXbert",
     "HopprCrimsonCT",
