@@ -24,6 +24,7 @@ METRIC_REGISTRY: dict[str, tuple[str, str]] = {
     # --- PRIVATE METRICS (stripped by scripts/publish_public.py) ---
     "f1hopprchexbert":     ("radeval.metrics.f1hopprchexbert.adapter",     "F1HopprCheXbertMetric"),
     "f1hopprchexbert_ct":  ("radeval.metrics.f1hopprchexbert_ct.adapter",  "F1HopprCheXbertCTMetric"),
+    "f1hopprchexbert_cth": ("radeval.metrics.f1hopprchexbert_cth.adapter", "F1HopprCheXbertCTHMetric"),
     "f1hopprchexbert_msk": ("radeval.metrics.f1hopprchexbert_msk.adapter", "F1HopprCheXbertMSKMetric"),
     "f1hopprchexbert_abd": ("radeval.metrics.f1hopprchexbert_abd.adapter", "F1HopprCheXbertAbdMetric"),
     "hoppr_crimson_ct":    ("radeval.metrics.hoppr_crimson_ct.adapter",    "HopprCrimsonCTMetric"),

@@ -33,6 +33,7 @@ RadEval/
     f1hopprchexbert/      # PRIVATE — Hoppr CXR labels (27 conditions), ModernBERT backbone
     f1Radbert_ct/         # CT multi-label classification (18 labels)
     f1hopprchexbert_ct/   # PRIVATE — CT multi-output ModernBERT-large (16 conditions)
+    f1hopprchexbert_cth/  # PRIVATE — CT-head multi-output ModernBERT-large (10 findings, 3-class)
     f1hopprchexbert_msk/  # PRIVATE — MSK multi-output ModernBERT-large (20 conditions)
     f1hopprchexbert_abd/  # PRIVATE — Abdomen multi-output ModernBERT-large (13 conditions)
     green_score/          # GREEN + MammoGREEN
@@ -117,5 +118,6 @@ regenerated and kept in sync.
 ### Key checkpoints (private, NFS)
 - HopprCheXbert CXR: `/fss/pranta_das/CheXbert/expermints_folder/25507/checkpoint_2.pth`
 - HopprF1CheXbertCT: `/nfs/cluster/hoppr_vlm_ressources/radeval_checkpoints/hoppr_f1chexbert_ct/`
+- HopprF1CheXbertCTH: `/nfs/cluster/hoppr_vlm_ressources/radeval_checkpoints/f1hopprchexbert_cth/` (10 CT-head findings, 3-class: absent / present / uncertain; positive = present or uncertain)
 - HopprF1CheXbertMSK: `/nfs/cluster/hoppr_vlm_ressources/radeval_checkpoints/f1hopprchexbert_msk/`
 - HopprF1CheXbertAbd: `/nfs/cluster/hoppr_vlm_ressources/radeval_checkpoints/f1hopprchexbert_abd/`
