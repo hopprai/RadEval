@@ -15,8 +15,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 from sklearn.metrics import accuracy_score, classification_report
-from sklearn.metrics._classification import _check_targets
-from sklearn.utils.sparsefuncs import count_nonzero
 
 
 def generate_attention_masks(batch_ids: torch.LongTensor) -> torch.FloatTensor:
@@ -160,19 +158,21 @@ class BaseCheXbertEvaluator(nn.Module):
 
         accuracy = accuracy_score(refs5, hyps5)
 
-        # sklearn >=1.8 returns (y_type, y_true, y_pred, indicator);
-        # earlier releases return (y_type, y_true, y_pred). Tolerate both.
-        _ct5 = _check_targets(refs5, hyps5)
-        y_true5, y_pred5 = _ct5[1], _ct5[2]
-        pe_accuracy = (count_nonzero(y_true5 - y_pred5, axis=1) == 0).astype(float)
+        # Per-sample metrics from the label-vector lists directly. We do NOT use
+        # sklearn's _check_targets here: on multilabel-indicator input it
+        # reshapes in a way that breaks the per-row subtraction (and the old
+        # sklearn.utils.sparsefuncs.count_nonzero required a sparse .format attr,
+        # crashing on the dense result). Stacking the (n, n_labels) arrays and
+        # reducing over axis=1 is exact and version-independent.
+        y_true5 = np.asarray(refs5)
+        y_pred5 = np.asarray(hyps5)
+        # pe_accuracy[i] == 1.0 iff sample i's top-5 labels match exactly.
+        pe_accuracy = (np.count_nonzero(y_true5 - y_pred5, axis=1) == 0).astype(float)
+        sample_label_acc_5 = (y_true5 == y_pred5).mean(axis=1).astype(float).tolist()
 
-        sample_label_acc_5 = np.asarray(
-            (y_true5 == y_pred5).mean(axis=1)).astype(float).ravel().tolist()
-
-        _ct_full = _check_targets(refs_chexbert, hyps_chexbert)
-        y_true_full, y_pred_full = _ct_full[1], _ct_full[2]
-        sample_label_acc_full = np.asarray(
-            (y_true_full == y_pred_full).mean(axis=1)).astype(float).ravel().tolist()
+        y_true_full = np.asarray(refs_chexbert)
+        y_pred_full = np.asarray(hyps_chexbert)
+        sample_label_acc_full = (y_true_full == y_pred_full).mean(axis=1).astype(float).tolist()
 
         cr = classification_report(
             refs_chexbert, hyps_chexbert,
