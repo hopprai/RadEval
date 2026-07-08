@@ -5,10 +5,11 @@ class BertScoreMetric(MetricBase):
     name = "bertscore"
     display_name = "BERTScore"
 
-    def __init__(self):
+    def __init__(self, batch_size=64):
         from .bertscore import BertScore
         self._scorer = BertScore(
-            model_type='distilbert-base-uncased', num_layers=5)
+            model_type='distilbert-base-uncased', num_layers=5,
+            batch_size=batch_size)
 
     def metric_keys(self, detailed=False):
         return ["bertscore"]

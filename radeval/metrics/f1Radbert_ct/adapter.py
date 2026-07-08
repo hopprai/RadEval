@@ -5,10 +5,10 @@ class F1RadbertCTMetric(MetricBase):
     name = "f1radbert_ct"
     display_name = "F1RadBERT-CT"
 
-    def __init__(self):
+    def __init__(self, batch_size=16):
         from .f1Radbert_ct import F1RadbertCT
         self._scorer = F1RadbertCT(
-            model_id="IAMJB/RadBERT-CT", threshold=0.5, batch_size=16)
+            model_id="IAMJB/RadBERT-CT", threshold=0.5, batch_size=batch_size)
 
     def metric_keys(self, detailed=False):
         return [

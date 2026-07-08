@@ -144,6 +144,7 @@ class GREEN:
         output_dir=".",
         cpu=False,
         num_gpus=None,  # NEW: set None to auto-detect (capped at 8)
+        batch_size=8,
     ):
         super().__init__()
         warnings.filterwarnings(
@@ -152,7 +153,7 @@ class GREEN:
 
         self.cpu = cpu
         self.output_dir = output_dir
-        self.batch_size = 8
+        self.batch_size = batch_size
         self.max_length = 2048
         self.categories = [
             "Clinically Significant Errors",
