@@ -78,16 +78,27 @@ class F1RadbertCT:
 
         return torch.cat(chunks, dim=0).numpy().astype(int)
 
-    def __call__(self, hyps: List[str], refs: List[str], on_batch_done=None):
-        return self.forward(hyps=hyps, refs=refs, on_batch_done=on_batch_done)
+    def __call__(self, hyps: List[str], refs: List[str], on_batch_done=None,
+                 return_label_matrices: bool = False):
+        return self.forward(hyps=hyps, refs=refs, on_batch_done=on_batch_done,
+                            return_label_matrices=return_label_matrices)
 
-    def forward(self, hyps: List[str], refs: List[str], on_batch_done=None) -> Tuple[float, List[float], dict]:
+    def forward(self, hyps: List[str], refs: List[str], on_batch_done=None,
+                return_label_matrices: bool = False):
+        """Score hyps against refs.
+
+        Returns (accuracy, per_sample_accuracy, classification_report). When
+        return_label_matrices is set, two extra elements are appended:
+        (..., y_pred, y_true) — the per-study predicted/true label matrices
+        (n_reports x n_labels ints). Callers bootstrap corpus F1 from these;
+        corpus micro/macro F1 is not recoverable from per_sample_accuracy alone.
+        """
         if not isinstance(hyps, list) or not isinstance(refs, list):
             raise TypeError("hyps and refs must be of type list")
         if len(hyps) != len(refs):
             raise ValueError("hyps and refs lists don't have the same size")
         if len(hyps) == 0:
-            return 0.0, [], {}
+            return (0.0, [], {}, [], []) if return_label_matrices else (0.0, [], {})
 
         y_pred = self._predict_label_matrix(hyps, on_batch_done=on_batch_done)
         y_true = self._predict_label_matrix(refs, on_batch_done=on_batch_done)
@@ -101,4 +112,6 @@ class F1RadbertCT:
             output_dict=True,
             zero_division=0,
         )
+        if return_label_matrices:
+            return accuracy, per_sample_accuracy, report, y_pred, y_true
         return accuracy, per_sample_accuracy, report
