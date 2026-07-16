@@ -35,6 +35,8 @@ RadEval/
     f1hopprchexbert_ct/   # PRIVATE — CT multi-output ModernBERT-large (16 conditions)
     f1hopprchexbert_cth/  # PRIVATE — CT-head multi-output ModernBERT-large (10 findings, 3-class)
     f1hoppr_msk_rrg_lv005_cls_lv009/  # PRIVATE — full-body MSK multi-output ModernBERT-large (26 findings, 3-class)
+    f1hoppr_shared/       # PRIVATE — shared dynamic 3-class multi-output scorer/adapter
+    f1hoppr_ctb_rrg_lv001_cls_lv001_{p0,core10k,all}/  # PRIVATE — CTB scopes (9/47/87)
     f1hopprchexbert_msk/  # PRIVATE — MSK multi-output ModernBERT-large (20 conditions)
     f1hopprchexbert_abd/  # PRIVATE — Abdomen multi-output ModernBERT-large (13 conditions)
     green_score/          # GREEN + MammoGREEN
@@ -89,6 +91,10 @@ tests/
   registry version => a new metric name. Class names are PascalCase of the metric
   (`HopprF1MskRrgLv005ClsLv009` / `F1HopprMskRrgLv005ClsLv009Metric`). The older
   `f1hopprchexbert_*` (ct/cth/msk/abd) names are historical — keep them, do not rename.
+- If one `(rrg, cls)` pair yields multiple head scopes, append a stable suffix:
+  `_p0` (prioritized heads), `_core<rule>` (e.g. `_core10k`), or `_all`.
+  Example: `f1hoppr_ctb_rrg_lv001_cls_lv001_{p0,core10k,all}`. Never expose
+  different condition orders/scopes under the same metric name.
 - Compound proper nouns stay as one word: `srrbert`, `bertscore`, `ratescore`
 - Output mode args on `RadEval.__init__`: `per_sample` and `detailed` (booleans)
 
@@ -128,5 +134,6 @@ regenerated and kept in sync.
 - HopprF1CheXbertCTH: `/nfs/cluster/hoppr_vlm_ressources/radeval_checkpoints/f1hopprchexbert_cth/` (10 CT-head findings, 3-class: absent / present / uncertain; positive = present or uncertain)
 - HopprF1CthRrgLv001ClsLv003: `/nfs/cluster/hoppr_vlm_ressources/radeval_checkpoints/f1hoppr_cth_rrg_lv001_cls_lv003/` (same model as f1hopprchexbert_cth, renamed under the f1hoppr_<rrg>_<cls> convention; trained on cth_rrg_lv001 + cth_cls_lv003)
 - HopprF1MskRrgLv005ClsLv009: `/nfs/cluster/hoppr_vlm_ressources/radeval_checkpoints/f1hoppr_msk_rrg_lv005_cls_lv009/` (26 full-body MSK findings, 3-class; positive = present or uncertain; trained on msk_rrg_lv005 + msk_cls_lv009, prevalence-subsampled 3.04M -> 750K)
+- HopprF1CtbRrgLv001ClsLv001 scopes: `/nfs/cluster/hoppr_vlm_ressources/radeval_checkpoints/f1hoppr_ctb_rrg_lv001_cls_lv001_{p0,core10k,all}/` (9/47/87 CT abdomen/pelvis findings; shared ctb_rrg_lv001 + ctb_cls_lv001 cohort)
 - HopprF1CheXbertMSK: `/nfs/cluster/hoppr_vlm_ressources/radeval_checkpoints/f1hopprchexbert_msk/`
 - HopprF1CheXbertAbd: `/nfs/cluster/hoppr_vlm_ressources/radeval_checkpoints/f1hopprchexbert_abd/`
