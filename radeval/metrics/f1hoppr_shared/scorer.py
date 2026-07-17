@@ -32,6 +32,7 @@ class MultiOutputClassifier(PreTrainedModel):
         self.num_conditions = int(config.num_conditions)
         self.num_classes = int(config.num_classes)
         self.condition_names = list(config.condition_names)
+        self.pooling = getattr(config, "text_classifier_pooling", "cls")
         self.heads = nn.ModuleList(
             [
                 nn.Linear(config.hidden_size, self.num_classes)
@@ -48,8 +49,16 @@ class MultiOutputClassifier(PreTrainedModel):
         **kwargs,
     ) -> MultiOutputClassifierOutput:
         outputs = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
-        cls_hidden = outputs.last_hidden_state[:, 0]
-        logits = torch.stack([head(cls_hidden) for head in self.heads], dim=1)
+        hidden = outputs.last_hidden_state
+        if self.pooling == "mean":
+            if attention_mask is None:
+                pooled = hidden.mean(dim=1)
+            else:
+                mask = attention_mask.unsqueeze(-1).to(hidden.dtype)
+                pooled = (hidden * mask).sum(dim=1) / mask.sum(dim=1).clamp_min(1)
+        else:
+            pooled = hidden[:, 0]
+        logits = torch.stack([head(pooled) for head in self.heads], dim=1)
         loss = None
         if labels is not None:
             total = torch.tensor(0.0, device=logits.device, dtype=logits.dtype)
