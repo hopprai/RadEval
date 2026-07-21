@@ -175,9 +175,13 @@ def _track_gemini_usage(response, cost_tracker: Optional[CostTracker]):
     try:
         usage = response.usage_metadata
         if usage:
+            output_tokens = (
+                (getattr(usage, "candidates_token_count", 0) or 0)
+                + (getattr(usage, "thoughts_token_count", 0) or 0)
+            )
             cost_tracker.add(
                 getattr(usage, "prompt_token_count", 0) or 0,
-                getattr(usage, "candidates_token_count", 0) or 0,
+                output_tokens,
             )
     except Exception:
         pass

@@ -254,11 +254,23 @@ class TestCrimsonUnit:
 
     def test_gemini_31_flash_lite_pricing(self):
         """Cost tracking uses current paid-tier Gemini API pricing."""
-        from radeval.metrics._llm import CostTracker, PRICING_PER_1M
+        from radeval.metrics._llm import (
+            CostTracker,
+            PRICING_PER_1M,
+            _track_gemini_usage,
+        )
 
         assert PRICING_PER_1M["gemini-3.1-flash-lite"] == (0.25, 1.50)
         tracker = CostTracker("gemini-3.1-flash-lite")
-        tracker.add(1_000_000, 1_000_000)
+        response = MagicMock()
+        response.usage_metadata.prompt_token_count = 1_000_000
+        response.usage_metadata.candidates_token_count = 750_000
+        response.usage_metadata.thoughts_token_count = 250_000
+
+        _track_gemini_usage(response, tracker)
+
+        assert tracker.input_tokens == 1_000_000
+        assert tracker.output_tokens == 1_000_000
         assert math.isclose(tracker.cost, 1.75, rel_tol=epsilon)
 
     def test_computed_scores(self, mock_openai_client):
