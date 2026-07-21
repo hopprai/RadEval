@@ -105,6 +105,14 @@ class TestCrimsonUnit:
             yield mock_client
 
     @pytest.fixture
+    def mock_gemini_client(self):
+        """Create a mocked Gemini client."""
+        with patch("google.genai.Client") as mock_class:
+            mock_client = MagicMock()
+            mock_class.return_value = mock_client
+            yield mock_client
+
+    @pytest.fixture
     def mock_hf_pipeline(self):
         """Create a mocked HuggingFace pipeline."""
         with patch("transformers.pipeline") as mock_pipeline:
@@ -144,6 +152,25 @@ class TestCrimsonUnit:
         assert scorer is not None
         assert scorer.provider == "openai"
         assert scorer.model_name == scorer.DEFAULT_OPENAI_MODEL
+
+    def test_gemini_initialization_with_api_key(self, mock_gemini_client):
+        """Test that Gemini initialization succeeds with API key."""
+        from radeval.metrics.crimson import CRIMSONScore
+
+        scorer = CRIMSONScore(provider="gemini", gemini_api_key="test-key")
+        assert scorer.provider == "gemini"
+        assert scorer.model_name == scorer.DEFAULT_GEMINI_MODEL
+
+    def test_gemini_request_uses_json_config(self, mock_gemini_client):
+        """Gemini requests use the shared LLM path with JSON-only output."""
+        from radeval.metrics.crimson import CRIMSONScore
+
+        scorer = CRIMSONScore(provider="gemini", gemini_api_key="test-key")
+        request = scorer._build_request(refs[0], hyps[0])
+
+        assert request["contents"]
+        assert request["config"].response_mime_type == "application/json"
+        assert request["config"].temperature == 0
 
     def test_hf_initialization_default_model(self, mock_hf_pipeline):
         """Test that HF initialization uses correct default model."""
@@ -209,6 +236,31 @@ class TestCrimsonUnit:
         assert len(scores) == len(refs)
         assert len(results_df) == len(refs)
 
+    def test_gemini_call_interface(self, mock_gemini_client):
+        """Gemini uses concurrent shared-LLM dispatch and returns scores."""
+        from radeval.metrics.crimson import CRIMSONScore
+
+        scorer = CRIMSONScore(provider="gemini", gemini_api_key="test-key")
+        scorer._chat_completion_async = AsyncMock(side_effect=[
+            json.dumps(mock_evaluations[0]),
+            json.dumps(mock_evaluations[1]),
+        ])
+        mean, std, scores, results_df = scorer(refs, hyps)
+
+        assert math.isclose(mean, expected_mean, rel_tol=epsilon)
+        assert math.isclose(std, expected_std, rel_tol=epsilon)
+        assert scores == expected_scores
+        assert len(results_df) == len(refs)
+
+    def test_gemini_31_flash_lite_pricing(self):
+        """Cost tracking uses current paid-tier Gemini API pricing."""
+        from radeval.metrics._llm import CostTracker, PRICING_PER_1M
+
+        assert PRICING_PER_1M["gemini-3.1-flash-lite"] == (0.25, 1.50)
+        tracker = CostTracker("gemini-3.1-flash-lite")
+        tracker.add(1_000_000, 1_000_000)
+        assert math.isclose(tracker.cost, 1.75, rel_tol=epsilon)
+
     def test_computed_scores(self, mock_openai_client):
         """Test that computed scores match expected values."""
         from radeval.metrics.crimson import CRIMSONScore
@@ -268,11 +320,12 @@ class TestCrimsonUnit:
         with pytest.raises(ValueError):
             scorer(refs[:1], hyps)
 
-    def test_unsupported_provider_raises(self):
-        """Test that unsupported provider raises NotImplementedError."""
+    def test_supported_providers_include_gemini(self):
+        """CRIMSON supports all shared-LLM API and local providers."""
         from radeval.metrics.crimson import CRIMSONScore
-        with pytest.raises(NotImplementedError, match="does not support"):
-            CRIMSONScore(provider="gemini")
+
+        assert CRIMSONScore.SUPPORTED_PROVIDERS == {
+            "openai", "gemini", "hf"}
 
 
 class TestCrimsonRadEvalIntegration:

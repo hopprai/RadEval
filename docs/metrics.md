@@ -286,11 +286,13 @@ print(results["mammo_green"])
 
 LLM-based clinical radiology report scoring from the [Rajpurkar Lab](https://github.com/rajpurkarlab/CRIMSON). Evaluates report quality by comparing predicted findings against reference findings, identifying errors (false findings, missing findings, attribute errors) and weighting them by clinical significance.
 
-Supports two backends:
+Supports three backends:
 - **HuggingFace** (default, `"provider": "hf"`): uses [MedGemma-CRIMSON](https://huggingface.co/CRIMSONScore/medgemma-4b-it-crimson) locally
 - **OpenAI** (`"provider": "openai"`): uses `gpt-5.2` by default
+- **Gemini** (`"provider": "gemini"`): uses `gemini-3.1-flash-lite` by default
 
-Requires `torch` + `transformers` for HuggingFace, or `pip install radeval[api]` for OpenAI.
+Requires `torch` + `transformers` for HuggingFace, or `pip install radeval[api]`
+and the matching API key for OpenAI/Gemini.
 
 | Mode | Output keys | Value |
 |------|------------|-------|
@@ -304,6 +306,15 @@ evaluator = RadEval(metrics=["crimson"])
 
 # OpenAI API (per-metric config via config file)
 evaluator = RadEval.from_config("config.yaml")  # see examples/config.yaml
+
+# Gemini API
+evaluator = RadEval(
+    metrics=[{"crimson": {
+        "provider": "gemini",
+        "model_name": "gemini-3.1-flash-lite",
+    }}],
+    gemini_api_key="AIza...",
+)
 
 results = evaluator(refs=refs, hyps=hyps)
 print(results["crimson"])  # range [-1, 1]

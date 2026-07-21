@@ -4,7 +4,7 @@ Evaluates radiology report quality by comparing predicted findings against
 reference findings, using an LLM to identify errors (false findings, missing
 findings, attribute errors) and weighting them by clinical significance.
 
-Supports OpenAI API and HuggingFace (MedGemma) backends.
+Supports OpenAI API, Gemini API, and HuggingFace (MedGemma) backends.
 
 Reference: https://arxiv.org/abs/2603.06183
 Code: https://github.com/rajpurkarlab/CRIMSON
@@ -110,12 +110,13 @@ def _validate_crimson_response(data: dict) -> None:
 # ---------------------------------------------------------------------------
 
 class CRIMSONScore(LLMMetricBase):
-    """CRIMSON scorer with OpenAI or HuggingFace backend."""
+    """CRIMSON scorer with OpenAI, Gemini, or HuggingFace backend."""
 
-    SUPPORTED_PROVIDERS: ClassVar[set[str]] = {"openai", "hf"}
+    SUPPORTED_PROVIDERS: ClassVar[set[str]] = {"openai", "gemini", "hf"}
 
     DEFAULT_HF_MODEL = "rajpurkarlab/medgemma-4b-it-crimson"
     DEFAULT_OPENAI_MODEL = "gpt-5.2"
+    DEFAULT_GEMINI_MODEL = "gemini-3.1-flash-lite"
     DEFAULT_MAX_NEW_TOKENS = 8192
 
     def __init__(
@@ -129,10 +130,13 @@ class CRIMSONScore(LLMMetricBase):
         max_concurrent=50,
         cache_dir=None,
     ):
-        resolved_model = model_name or (
-            self.DEFAULT_OPENAI_MODEL if provider == "openai"
-            else self.DEFAULT_HF_MODEL
-        )
+        default_models = {
+            "openai": self.DEFAULT_OPENAI_MODEL,
+            "gemini": self.DEFAULT_GEMINI_MODEL,
+            "hf": self.DEFAULT_HF_MODEL,
+        }
+        resolved_model = model_name or default_models.get(
+            provider, self.DEFAULT_HF_MODEL)
 
         super().__init__(
             provider=provider,
@@ -204,6 +208,17 @@ class CRIMSONScore(LLMMetricBase):
                 "temperature": 0,
                 "seed": 42,
                 "response_format": {"type": "json_object"},
+            }
+        elif self.provider == "gemini":
+            from google.genai import types
+
+            return {
+                "contents": prompt,
+                "config": types.GenerateContentConfig(
+                    system_instruction=_SYSTEM_MSG,
+                    temperature=0,
+                    response_mime_type="application/json",
+                ),
             }
         else:
             return {"prompt": prompt}
@@ -318,7 +333,7 @@ class CRIMSONScore(LLMMetricBase):
                  include_guidelines=True, on_sample_done=None):
         """Compute CRIMSON across multiple report pairs.
 
-        Uses async concurrency for OpenAI, sequential for HF.
+        Uses async concurrency for OpenAI/Gemini, sequential for HF.
 
         Returns:
             (mean, std, crimson_scores, results_df)
@@ -334,7 +349,7 @@ class CRIMSONScore(LLMMetricBase):
             raise ValueError(
                 "patient_contexts must have same size as refs/hyps")
 
-        if self.provider == "openai":
+        if self.provider in ("openai", "gemini"):
             results = self._run_concurrent_crimson(
                 refs, hyps, patient_contexts, include_guidelines,
                 on_sample_done)
