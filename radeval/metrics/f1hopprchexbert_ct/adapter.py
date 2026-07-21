@@ -27,14 +27,19 @@ class F1HopprCheXbertCTMetric(MetricBase):
     def compute(self, refs, hyps, per_sample=False, detailed=False,
                 on_progress=None):
         """Override: per_sample mode returns different keys than default."""
-        accuracy, sample_acc, report = self._scorer(
-            hyps, refs, on_batch_done=on_progress)
+        accuracy, sample_acc, report, y_pred, y_true = self._scorer(
+            hyps, refs, on_batch_done=on_progress, return_label_matrices=True)
 
         if per_sample:
+            # Label matrices ride the per-sample channel (they're per-study, one
+            # row each) so a caller can bootstrap a corpus-F1 CI; detailed mode is
+            # kept list-free by contract.
             return {
                 "f1hopprchexbert_ct_sample_acc": (
                     sample_acc.tolist() if hasattr(sample_acc, 'tolist')
                     else list(sample_acc)),
+                "f1hopprchexbert_ct_pred_labels": y_pred.tolist(),
+                "f1hopprchexbert_ct_true_labels": y_true.tolist(),
             }
         elif detailed:
             labels = {k: v["f1-score"] for k, v in list(report.items())[:-4]}

@@ -39,6 +39,7 @@ PRIVATE_METRICS = [
     "f1hopprchexbert_ct",
     "f1hopprchexbert_cth",
     "f1hopprchexbert_msk",
+    "f1hopprchexbert_mammo",
     "f1hopprchexbert_abd",
     "f1hoppr_cth_rrg_lv001_cls_lv003",
     "f1hoppr_msk_rrg_lv005_cls_lv009",

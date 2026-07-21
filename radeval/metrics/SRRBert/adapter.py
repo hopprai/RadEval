@@ -5,11 +5,12 @@ class SRRBertMetric(MetricBase):
     name = "srrbert"
     display_name = "SRR-BERT"
 
-    def __init__(self):
+    def __init__(self, batch_size=4):
         import nltk
         nltk.download('punkt_tab', quiet=True)
         from .srr_bert import SRRBert
-        self._scorer = SRRBert(model_type="leaves_with_statuses")
+        self._scorer = SRRBert(
+            model_type="leaves_with_statuses", batch_size=batch_size)
 
     def metric_keys(self, detailed=False):
         keys = ["srrbert_weighted_f1", "srrbert_weighted_precision",

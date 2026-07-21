@@ -5,9 +5,11 @@ class GreenMetric(MetricBase):
     name = "green"
     display_name = "GREEN"
 
-    def __init__(self):
+    def __init__(self, batch_size=8):
         from .green import GREEN
-        self._scorer = GREEN("StanfordAIMI/GREEN-radllama2-7b", output_dir=".")
+        self._scorer = GREEN(
+            "StanfordAIMI/GREEN-radllama2-7b", output_dir=".",
+            batch_size=batch_size)
 
     def metric_keys(self, detailed=False):
         return ["green"] + (["green_std"] if detailed else [])

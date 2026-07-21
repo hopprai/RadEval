@@ -5,9 +5,9 @@ class F1CheXbertMetric(MetricBase):
     name = "f1chexbert"
     display_name = "F1CheXbert"
 
-    def __init__(self):
+    def __init__(self, batch_size=64):
         from .f1chexbert import F1CheXbert
-        self._scorer = F1CheXbert()
+        self._scorer = F1CheXbert(batch_size=batch_size)
 
     def metric_keys(self, detailed=False):
         return [

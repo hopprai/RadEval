@@ -81,3 +81,48 @@ def test_f1Radbert_ct_exact_outputs():
     ]
     assert [[i for i, on in enumerate(row) if on] for row in pred_mask.tolist()] == [[], [10, 12]]
 
+
+def test_f1Radbert_ct_per_sample_exposes_label_matrices():
+    """per_sample mode returns per-study pred/true label matrices, and corpus
+    micro/macro F1 recomputed from them matches RadEval's own detailed numbers
+    (this is what lets a caller bootstrap a corpus-F1 CI)."""
+    import numpy as np
+    from sklearn.metrics import f1_score
+    from radeval import RadEval
+
+    refs = [
+        "No acute cardiopulmonary abnormality.",
+        "Right lower lobe opacity, suspicious for pneumonia. Pleural effusion present.",
+        "Coronary artery calcification. Centrilobular emphysema. No pleural effusion.",
+    ]
+    hyps = [
+        "No acute cardiopulmonary process.",
+        "Pleural effusion. Right basilar opacity consistent with pneumonia.",
+        "Aortic atherosclerosis with emphysema.",
+    ]
+
+    ps = RadEval(metrics=["f1radbert_ct"], per_sample=True, show_progress=False)(
+        refs=refs, hyps=hyps)
+    assert "f1radbert_ct_pred_labels" in ps
+    assert "f1radbert_ct_true_labels" in ps
+    y_pred = np.array(ps["f1radbert_ct_pred_labels"])
+    y_true = np.array(ps["f1radbert_ct_true_labels"])
+    assert y_pred.shape == y_true.shape == (len(refs), len(F1RadbertCT_LABELS) + 1)
+
+    detailed = RadEval(metrics=["f1radbert_ct"], detailed=True, show_progress=False)(
+        refs=refs, hyps=hyps)
+    assert round(f1_score(y_true, y_pred, average="micro", zero_division=0), 4) == \
+        detailed["f1radbert_ct_micro_f1"]
+    assert round(f1_score(y_true, y_pred, average="macro", zero_division=0), 4) == \
+        detailed["f1radbert_ct_macro_f1"]
+
+
+F1RadbertCT_LABELS = [
+    "Medical material", "Arterial wall calcification", "Cardiomegaly",
+    "Pericardial effusion", "Coronary artery wall calcification", "Hiatal hernia",
+    "Lymphadenopathy", "Emphysema", "Atelectasis", "Lung nodule", "Lung opacity",
+    "Pulmonary fibrotic sequela", "Pleural effusion", "Mosaic attenuation pattern",
+    "Peribronchial thickening", "Consolidation", "Bronchiectasis",
+    "Interlobular septal thickening",
+]
+
