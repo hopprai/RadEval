@@ -138,7 +138,8 @@ class BaseCheXbertEvaluator(nn.Module):
                 on_batch_done()
         return labels
 
-    def forward(self, hyps: List[str], refs: List[str], on_batch_done=None):
+    def forward(self, hyps: List[str], refs: List[str], on_batch_done=None,
+                return_label_matrices: bool = False):
         if self.refs_filename and os.path.exists(self.refs_filename):
             with open(self.refs_filename) as f:
                 refs_chexbert = [json.loads(line) for line in f]
@@ -183,4 +184,10 @@ class BaseCheXbertEvaluator(nn.Module):
             target_names=self.TOP5, output_dict=True,
         )
 
+        if return_label_matrices:
+            # Per-study predicted/true label matrices for both the all-condition and
+            # top-5 sets, so a caller can bootstrap a corpus-F1 CI (mirrors the
+            # f1*_ct scorers' return_label_matrices contract).
+            return (accuracy, pe_accuracy, cr, cr5, sample_label_acc_full, sample_label_acc_5,
+                    y_pred_full.tolist(), y_true_full.tolist(), y_pred5.tolist(), y_true5.tolist())
         return accuracy, pe_accuracy, cr, cr5, sample_label_acc_full, sample_label_acc_5

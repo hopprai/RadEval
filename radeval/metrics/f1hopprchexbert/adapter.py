@@ -28,10 +28,13 @@ class F1HopprCheXbertMetric(MetricBase):
     def compute(self, refs, hyps, per_sample=False, detailed=False,
                 on_progress=None):
         """Override: per_sample mode returns different keys than default."""
-        _, _, cr_all, cr_5, sample_acc_full, sample_acc_5 = \
-            self._scorer.forward(hyps, refs, on_batch_done=on_progress)
-
         if per_sample:
+            (_, _, cr_all, cr_5, sample_acc_full, sample_acc_5,
+             pred_all, true_all, pred_5, true_5) = self._scorer.forward(
+                hyps, refs, on_batch_done=on_progress, return_label_matrices=True)
+            # Label matrices ride the per-sample channel (one row per study) so a
+            # caller can bootstrap a corpus-F1 CI. `_all` is the 27-condition set
+            # matching *_all_micro_f1; `_5` is the top-5 set matching *_5_micro_f1.
             return {
                 "f1hopprchexbert_sample_acc_5": (
                     sample_acc_5.tolist() if hasattr(sample_acc_5, 'tolist')
@@ -39,8 +42,15 @@ class F1HopprCheXbertMetric(MetricBase):
                 "f1hopprchexbert_sample_acc_all": (
                     sample_acc_full.tolist() if hasattr(sample_acc_full, 'tolist')
                     else list(sample_acc_full)),
+                "f1hopprchexbert_all_pred_labels": pred_all,
+                "f1hopprchexbert_all_true_labels": true_all,
+                "f1hopprchexbert_5_pred_labels": pred_5,
+                "f1hopprchexbert_5_true_labels": true_5,
             }
-        elif detailed:
+
+        _, _, cr_all, cr_5, sample_acc_full, sample_acc_5 = \
+            self._scorer.forward(hyps, refs, on_batch_done=on_progress)
+        if detailed:
             labels_5 = {k: v["f1-score"] for k, v in list(cr_5.items())[:-4]}
             labels_all = {k: v["f1-score"] for k, v in list(cr_all.items())[:-4]}
             return {
