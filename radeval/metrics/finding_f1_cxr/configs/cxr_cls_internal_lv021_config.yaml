@@ -1,0 +1,143 @@
+label_id: cxr_cls_internal_lv021
+pipeline_commit: ee9297a0d0008ea18e0dc0367ac975f0628d8108
+model_version: gpt-5.4-nano
+reproduce: cd hoppr_dataset/datasets/xray_chest_p1/pipelines/text_label_extraction && uv run python
+  main.py phase=1 batch.max_cost=<budget> ; uv run python retrieve.py ; uv run python main.py
+  phase=2 batch.max_cost=<budget> ; uv run python retrieve.py ; uv run python register.py --version
+  lv021 --write
+phase1:
+  run_dir: /fss-data/akash_pattnaik/hoppr_dataset/text_label_extraction/outputs/2026-05-28/18-02-53
+  config:
+    experiment:
+      name: ''
+      num_samples: -1
+      seed: 42
+    model:
+      name: gpt-5.4-nano
+      max_tokens: 8000
+      temperature: 0.0
+      batch_backend: openai
+    batch:
+      backend: openai
+      batch_size: 2000
+      max_cost: 1500
+      use_context_cache: false
+    preamble:
+      key: two_phase_p1
+      text: "# Chest X-Ray — Phase 1: Finding Certainty\n\nYou are an expert radiologist.\
+        \ For the chest radiograph report below,\nidentify each finding that is mentioned\
+        \ and label it with a certainty\nvalue. Do NOT extract modifiers (severity,\
+        \ location, chronicity, trend,\nsubtypes) — those come in Phase 2 and are\
+        \ outside the schema for this\nphase.\n\nOnly classify findings mentioned\
+        \ in the body or impression of the report.\nIgnore findings in the clinical\
+        \ history or indication (e.g. \"Indication:\nfever, evaluate for pneumonia\"\
+        \ does not make air_space_opacity present).\n\n## Validation\n\nProceed only\
+        \ if the report is a chest x-ray (1-view or 2-view). If it is\na CT, a non-chest\
+        \ x-ray, or a chest x-ray combined with another study,\nemit no findings.\n\
+        \n## Certainty values\n\n- present      — the finding is asserted. Mild hedges\
+        \ (\"probable\", \"likely\",\n                 \"consistent with\", \"favors\"\
+        ) count as present.\n- absent       — the finding is explicitly negated, or\
+        \ explicitly stated as\n                 resolved.\n- uncertain    — significant\
+        \ hedging (\"possible\", \"could represent\",\n                 \"suggestive\
+        \ of\", \"cannot exclude\", \"non-specific for\"),\n                 ambiguous\
+        \ wording, or the finding appears in a differential\n                 with\
+        \ non-synonymous entities.\n- not changed  — the report asserts the finding\
+        \ is unchanged/stable from\n                 prior imaging and does not restate\
+        \ its current magnitude.\n                 If the report both asserts the\
+        \ finding now AND states it is\n                 stable, prefer ``present``\
+        \ (Phase 2's trend field will carry\n                 the stability).\n\n\"\
+        not mentioned\" is never emitted — omit such findings entirely. The absence\n\
+        of an entry is itself the \"not mentioned\" signal.\n\n## Absence-inference\
+        \ rules\n\nEach catalog entry shows a clinical_significance label\n(C1 / C2a\
+        \ / C2b / C3). These rules decide when to emit ABSENT vs OMIT:\n\n- C1  (critical):\
+        \ ALWAYS emit ABSENT when not mentioned. A radiologist\n                 \
+        \ would have reported a C1 finding if present.\n- C2a (actionable, anatomical\
+        \ survey): emit ABSENT only if the relevant\n                  anatomy is\
+        \ surveyed as normal (\"clear lungs\", \"cardiac\n                  silhouette\
+        \ within normal limits\"). Otherwise OMIT.\n- C2b (actionable, severity threshold):\
+        \ emit ABSENT only if the relevant\n                  anatomy is surveyed\
+        \ as normal (a severe instance would\n                  have been reported).\
+        \ Otherwise OMIT.\n- C3  (incidental): emit ABSENT only if explicitly negated.\
+        \ Otherwise OMIT.\n\n## Multi-instance\n\nIf the report describes the same\
+        \ finding as multiple distinct observations\n(e.g., two effusions at different\
+        \ severities), emit one entry per\nobservation. Each gets its own certainty\
+        \ value.\n\n## Output\n\nEmit one entry per mentioned finding (plus additional\
+        \ entries for\nmulti-instance observations). Each entry has:\n  - finding\
+        \  — the finding_id from the catalog\n  - certainty — one of: present | absent\
+        \ | uncertain | not changed\nDo not emit any other fields.\n"
+    definitions:
+      key: v4a
+      path: ${hydra:runtime.cwd}/../../docs/definitions_v4a.jsonl
+    phase: 1
+    phase1_run_dir: null
+    use_explicit_cache: false
+    base_cxr_sql_file: ${oc.env:CXR_BASE_CXR_SQL,${hydra:runtime.cwd}/../../queries/base_cxr.sql}
+    weak_labels_file: ${oc.env:CXR_WEAK_LABELS,${hydra:runtime.cwd}/../../eda/eda_generator/data/radgraph_weak_labels_lv020.parquet}
+phase2:
+  run_dir: /fss-data/akash_pattnaik/hoppr_dataset/text_label_extraction/outputs/2026-05-29/20-15-05
+  config:
+    experiment:
+      name: ''
+      num_samples: -1
+      seed: 42
+    model:
+      name: gpt-5.4-nano
+      max_tokens: 8000
+      temperature: 0.0
+      batch_backend: openai
+    batch:
+      backend: openai
+      batch_size: 2000
+      max_cost: 300
+      use_context_cache: false
+    preamble:
+      key: two_phase_p1
+      text: "# Chest X-Ray — Phase 1: Finding Certainty\n\nYou are an expert radiologist.\
+        \ For the chest radiograph report below,\nidentify each finding that is mentioned\
+        \ and label it with a certainty\nvalue. Do NOT extract modifiers (severity,\
+        \ location, chronicity, trend,\nsubtypes) — those come in Phase 2 and are\
+        \ outside the schema for this\nphase.\n\nOnly classify findings mentioned\
+        \ in the body or impression of the report.\nIgnore findings in the clinical\
+        \ history or indication (e.g. \"Indication:\nfever, evaluate for pneumonia\"\
+        \ does not make air_space_opacity present).\n\n## Validation\n\nProceed only\
+        \ if the report is a chest x-ray (1-view or 2-view). If it is\na CT, a non-chest\
+        \ x-ray, or a chest x-ray combined with another study,\nemit no findings.\n\
+        \n## Certainty values\n\n- present      — the finding is asserted. Mild hedges\
+        \ (\"probable\", \"likely\",\n                 \"consistent with\", \"favors\"\
+        ) count as present.\n- absent       — the finding is explicitly negated, or\
+        \ explicitly stated as\n                 resolved.\n- uncertain    — significant\
+        \ hedging (\"possible\", \"could represent\",\n                 \"suggestive\
+        \ of\", \"cannot exclude\", \"non-specific for\"),\n                 ambiguous\
+        \ wording, or the finding appears in a differential\n                 with\
+        \ non-synonymous entities.\n- not changed  — the report asserts the finding\
+        \ is unchanged/stable from\n                 prior imaging and does not restate\
+        \ its current magnitude.\n                 If the report both asserts the\
+        \ finding now AND states it is\n                 stable, prefer ``present``\
+        \ (Phase 2's trend field will carry\n                 the stability).\n\n\"\
+        not mentioned\" is never emitted — omit such findings entirely. The absence\n\
+        of an entry is itself the \"not mentioned\" signal.\n\n## Absence-inference\
+        \ rules\n\nEach catalog entry shows a clinical_significance label\n(C1 / C2a\
+        \ / C2b / C3). These rules decide when to emit ABSENT vs OMIT:\n\n- C1  (critical):\
+        \ ALWAYS emit ABSENT when not mentioned. A radiologist\n                 \
+        \ would have reported a C1 finding if present.\n- C2a (actionable, anatomical\
+        \ survey): emit ABSENT only if the relevant\n                  anatomy is\
+        \ surveyed as normal (\"clear lungs\", \"cardiac\n                  silhouette\
+        \ within normal limits\"). Otherwise OMIT.\n- C2b (actionable, severity threshold):\
+        \ emit ABSENT only if the relevant\n                  anatomy is surveyed\
+        \ as normal (a severe instance would\n                  have been reported).\
+        \ Otherwise OMIT.\n- C3  (incidental): emit ABSENT only if explicitly negated.\
+        \ Otherwise OMIT.\n\n## Multi-instance\n\nIf the report describes the same\
+        \ finding as multiple distinct observations\n(e.g., two effusions at different\
+        \ severities), emit one entry per\nobservation. Each gets its own certainty\
+        \ value.\n\n## Output\n\nEmit one entry per mentioned finding (plus additional\
+        \ entries for\nmulti-instance observations). Each entry has:\n  - finding\
+        \  — the finding_id from the catalog\n  - certainty — one of: present | absent\
+        \ | uncertain | not changed\nDo not emit any other fields.\n"
+    definitions:
+      key: v4a
+      path: ${hydra:runtime.cwd}/../../docs/definitions_v4a.jsonl
+    phase: 2
+    phase1_run_dir: outputs/2026-05-28/18-02-53
+    use_explicit_cache: false
+    base_cxr_sql_file: ${oc.env:CXR_BASE_CXR_SQL,${hydra:runtime.cwd}/../../queries/base_cxr.sql}
+    weak_labels_file: ${oc.env:CXR_WEAK_LABELS,${hydra:runtime.cwd}/../../eda/eda_generator/data/radgraph_weak_labels_lv020.parquet}
