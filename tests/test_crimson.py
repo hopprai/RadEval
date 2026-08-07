@@ -171,6 +171,34 @@ class TestCrimsonUnit:
         assert request["contents"]
         assert request["config"].response_mime_type == "application/json"
         assert request["config"].temperature == 0
+        assert request["config"].response_json_schema is not None
+
+    def test_gemini_cost_includes_thinking_tokens(self):
+        from radeval.metrics._llm import CostTracker, _track_gemini_usage
+
+        usage = MagicMock(
+            prompt_token_count=100,
+            candidates_token_count=200,
+            thoughts_token_count=300,
+        )
+        response = MagicMock(usage_metadata=usage)
+        tracker = CostTracker("gemini-3.1-flash-lite")
+        _track_gemini_usage(response, tracker)
+        assert tracker.input_tokens == 100
+        assert tracker.output_tokens == 500
+        assert tracker.cost == pytest.approx(
+            100 * 0.25 / 1_000_000 + 500 * 1.50 / 1_000_000
+        )
+
+    def test_gemini_single_evaluate(self, mock_gemini_client):
+        from radeval.metrics.crimson import CRIMSONScore
+
+        scorer = CRIMSONScore(provider="gemini", gemini_api_key="test-key")
+        scorer._chat_completion = MagicMock(
+            return_value=json.dumps(mock_evaluations[0])
+        )
+        result = scorer._evaluate_one(refs[0], hyps[0])
+        assert result["crimson_score"] == 1.0
 
     def test_hf_initialization_default_model(self, mock_hf_pipeline):
         """Test that HF initialization uses correct default model."""

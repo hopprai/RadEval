@@ -285,12 +285,29 @@ class LLMMetricBase(ABC):
         on_sample_done=None,
         **kwargs,
     ) -> list[dict]:
-        """Run evaluations concurrently via asyncio with a semaphore."""
+        """Run evaluations concurrently via asyncio with a semaphore.
+
+        A single sample that fails all retries (e.g. the judge returns
+        unparseable JSON) must NOT abort the whole batch — over thousands of
+        samples a few malformed responses are expected. Such samples are
+        returned as an ``{"__error__": <msg>}`` sentinel; ``_aggregate`` /
+        ``error_totals`` skip sentinels, so they are excluded from the mean
+        (like a NaN score) rather than crashing the run.
+        """
         sem = asyncio.Semaphore(self.max_concurrent)
+        self._n_failed_samples = 0
 
         async def _sem_eval(ref, hyp):
             async with sem:
-                result = await self._evaluate_one_async(ref, hyp, **kwargs)
+                try:
+                    result = await self._evaluate_one_async(ref, hyp, **kwargs)
+                except Exception as e:  # noqa: BLE001 - isolate per-sample failure
+                    self._n_failed_samples += 1
+                    logger.warning(
+                        "%s: sample failed all retries, recording sentinel: %s",
+                        self.__class__.__name__, e,
+                    )
+                    result = {"__error__": str(e)}
                 if on_sample_done:
                     on_sample_done()
                 return result
