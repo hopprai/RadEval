@@ -30,6 +30,112 @@ _SYSTEM_MSG = (
     "the accuracy of radiology reports."
 )
 
+_SIGNIFICANCE_LEVELS = [
+    "urgent",
+    "actionable_not_urgent",
+    "not_actionable_not_urgent",
+    "benign_expected",
+]
+_ERROR_TYPES = [
+    "location",
+    "severity",
+    "descriptor",
+    "measurement",
+    "certainty",
+    "unspecific",
+    "overinterpretation",
+    "temporal",
+]
+_FINDING_SCHEMA = {
+    "type": "object",
+    "required": ["id", "finding", "clinical_significance"],
+    "properties": {
+        "id": {"type": "string"},
+        "finding": {"type": "string"},
+        "clinical_significance": {
+            "type": "string",
+            "enum": _SIGNIFICANCE_LEVELS,
+        },
+    },
+}
+_CRIMSON_RESPONSE_SCHEMA = {
+    "type": "object",
+    "required": [
+        "reference_findings",
+        "predicted_findings",
+        "matched_findings",
+        "errors",
+    ],
+    "properties": {
+        "reference_findings": {
+            "type": "array",
+            "items": _FINDING_SCHEMA,
+        },
+        "predicted_findings": {
+            "type": "array",
+            "items": _FINDING_SCHEMA,
+        },
+        "matched_findings": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["ref_id", "pred_id"],
+                "properties": {
+                    "ref_id": {"type": "string"},
+                    "pred_id": {"type": "string"},
+                },
+            },
+        },
+        "errors": {
+            "type": "object",
+            "required": [
+                "false_findings",
+                "missing_findings",
+                "attribute_errors",
+            ],
+            "properties": {
+                "false_findings": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
+                "missing_findings": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                },
+                "attribute_errors": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "required": [
+                            "ref_id",
+                            "pred_id",
+                            "severity",
+                            "error_types",
+                            "explanation",
+                        ],
+                        "properties": {
+                            "ref_id": {"type": "string"},
+                            "pred_id": {"type": "string"},
+                            "severity": {
+                                "type": "string",
+                                "enum": ["significant", "negligible"],
+                            },
+                            "error_types": {
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "enum": _ERROR_TYPES,
+                                },
+                            },
+                            "explanation": {"type": "string"},
+                        },
+                    },
+                },
+            },
+        },
+    },
+}
+
 
 # ---------------------------------------------------------------------------
 # JSON helpers (module-level, reused by HopprCrimsonCT)
@@ -129,6 +235,9 @@ class CRIMSONScore(LLMMetricBase):
         batch_size=1,
         max_concurrent=50,
         cache_dir=None,
+        temperature=0.0,
+        max_output_tokens=8192,
+        thinking_level="minimal",
     ):
         default_models = {
             "openai": self.DEFAULT_OPENAI_MODEL,
@@ -148,6 +257,9 @@ class CRIMSONScore(LLMMetricBase):
 
         self.batch_size = batch_size
         self.cache_dir = cache_dir
+        self.temperature = temperature
+        self.max_output_tokens = max_output_tokens
+        self.thinking_level = thinking_level
 
         if provider in ("huggingface", "hf"):
             self._init_hf_pipeline()
@@ -212,12 +324,21 @@ class CRIMSONScore(LLMMetricBase):
         elif self.provider == "gemini":
             from google.genai import types
 
+            thinking_level = getattr(
+                types.ThinkingLevel,
+                str(self.thinking_level).upper(),
+            )
             return {
                 "contents": prompt,
                 "config": types.GenerateContentConfig(
                     system_instruction=_SYSTEM_MSG,
-                    temperature=0,
+                    temperature=self.temperature,
+                    max_output_tokens=self.max_output_tokens,
                     response_mime_type="application/json",
+                    response_json_schema=_CRIMSON_RESPONSE_SCHEMA,
+                    thinking_config=types.ThinkingConfig(
+                        thinking_level=thinking_level,
+                    ),
                 ),
             }
         else:

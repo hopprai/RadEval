@@ -357,7 +357,7 @@ print(results["radfact_ct_f1"])         # 74.07
 
 | Metric | OpenAI | Gemini | Local HF |
 |--------|--------|--------|----------|
-| CRIMSON | yes | -- | yes |
+| CRIMSON | yes | yes | yes |
 | MammoGREEN | yes | yes | -- |
 | RadFact-CT | yes | -- | -- |
 | GREEN | -- | -- | yes |
