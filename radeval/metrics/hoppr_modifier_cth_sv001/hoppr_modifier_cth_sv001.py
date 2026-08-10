@@ -190,7 +190,10 @@ class HopprModifierCthSv001(LLMMetricBase):
     def _aggregate(
         self, results: list[dict], refs: list[str], hyps: list[str],
     ) -> tuple:
-        scores = [r["modifier_cth_score"] for r in results]
+        scores = [
+            r["modifier_cth_score"] if "__error__" not in r else float("nan")
+            for r in results
+        ]
 
         valid = [s for s in scores if s is not None and not np.isnan(s)]
         mean = float(np.mean(valid)) if valid else float("nan")
