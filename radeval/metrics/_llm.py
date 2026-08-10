@@ -30,7 +30,7 @@ PRICING_PER_1M: dict[str, tuple[float, float]] = {
     # Google Gemini (https://ai.google.dev/gemini-api/docs/pricing)
     "gemini-2.5-flash": (0.30, 2.50),
     "gemini-2.5-pro":   (1.25, 10.00),
-    "gemini-3.1-flash-lite": (0.10, 0.40),
+    "gemini-3.1-flash-lite": (0.25, 1.50),
 }
 
 # ---------------------------------------------------------------------------
@@ -175,9 +175,13 @@ def _track_gemini_usage(response, cost_tracker: Optional[CostTracker]):
     try:
         usage = response.usage_metadata
         if usage:
+            output_tokens = (
+                (getattr(usage, "candidates_token_count", 0) or 0)
+                + (getattr(usage, "thoughts_token_count", 0) or 0)
+            )
             cost_tracker.add(
                 getattr(usage, "prompt_token_count", 0) or 0,
-                getattr(usage, "candidates_token_count", 0) or 0,
+                output_tokens,
             )
     except Exception:
         pass

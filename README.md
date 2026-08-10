@@ -213,7 +213,7 @@ How expensive is each metric when used as a per-step reward, how does reward cho
 | | [Temporal F1](https://aclanthology.org/2025.findings-acl.888.pdf) | `"temporal"` | CXR | -- | Temporal consistency | [docs](docs/metrics.md#temporal-f1-temporal) |
 | | [GREEN](https://aclanthology.org/2024.findings-emnlp.21.pdf) | `"green"` | CXR | Local HF | LLM-based overall quality (7B model) | [docs](docs/metrics.md#green-green) |
 | | MammoGREEN | `"mammo_green"` | Mammo | OpenAI / Gemini | Mammography-specific LLM scoring | [docs](docs/metrics.md#mammogreen-mammo_green) |
-| | [CRIMSON](https://arxiv.org/pdf/2603.06183) | `"crimson"` | CXR | OpenAI / HF | LLM-based clinical significance scoring | [docs](docs/metrics.md#crimson-crimson) |
+| | [CRIMSON](https://arxiv.org/pdf/2603.06183) | `"crimson"` | CXR | OpenAI / Gemini / HF | LLM-based clinical significance scoring | [docs](docs/metrics.md#crimson-crimson) |
 | | [RadFact-CT](https://arxiv.org/pdf/2510.15042) | `"radfact_ct"` | CT | OpenAI | LLM-based factual precision/recall | [docs](docs/metrics.md#radfact-ct-radfact_ct) |
 
 > **Modality:** CXR = Chest X-Ray, CT = Computed Tomography, Mammo = Mammography, -- = modality-agnostic.
@@ -228,7 +228,7 @@ LLM-based metrics (CRIMSON, MammoGREEN, RadFact-CT) share two **global** API key
 evaluator = RadEval(
     metrics=["crimson", "mammo_green", "radfact_ct"],
     openai_api_key="sk-...",   # used by CRIMSON (openai), MammoGREEN (openai), RadFact-CT
-    gemini_api_key="AIza...",  # used by MammoGREEN (gemini)
+    gemini_api_key="AIza...",  # used by CRIMSON/MammoGREEN (gemini)
 )
 ```
 
