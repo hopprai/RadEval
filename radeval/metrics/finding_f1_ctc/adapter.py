@@ -4,14 +4,14 @@ from .finding_f1_ctc import FindingF1CTC
 
 
 class FindingF1CTCMetric(MetricBase):
-    """Finding-level F1 extraction and evaluation for CT Chest using lv010.
+    """Finding-level F1 extraction and evaluation for CT Chest (25 findings).
 
+    Uses the C1/C2/C3 taxonomy with 23 findings + 2 region assessments.
     Returns per-sample F1/precision/recall, aggregate metrics, and per-finding confusion matrices.
-    Outputs: finding_f1, finding_precision, finding_recall, macro/micro sensitivity/specificity/PPV/NPV.
     """
 
     name = "finding_f1_ctc"
-    display_name = "Finding F1 (CTC lv010)"
+    display_name = "Finding F1 (CTC)"
 
     def __init__(
         self,
