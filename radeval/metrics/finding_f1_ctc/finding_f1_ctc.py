@@ -47,6 +47,40 @@ REGION_FINDINGS = [
 
 ALL_FINDINGS = C1_FINDINGS + C2_FINDINGS + C3_FINDINGS + REGION_FINDINGS
 
+# Clinical urgency weights (v0): higher weight = worse consequences if missed
+CLINICAL_WEIGHTS: dict[str, int] = {
+    # Tier 5 — Critical/emergent: immediate life-threat
+    "acute_aortic_injury": 5,
+    "acute_pulmonary_embolism": 5,
+    "pneumothorax": 5,
+    # Tier 4 — Urgent: needs prompt intervention
+    "acute_rib_fracture": 4,
+    "air_space_opacity": 4,
+    # Tier 3 — Significant: actionable, needs follow-up
+    "aortic_aneurysm": 3,
+    "bone_lesion": 3,
+    "hilar_lymphadenopathy": 3,
+    "lung_nodule_or_mass": 3,
+    "mediastinal_lymphadenopathy": 3,
+    "pericardial_effusion": 3,
+    "pleural_effusion": 3,
+    # Tier 2 — Moderate: chronic/structural, management implications
+    "atelectasis": 2,
+    "bronchiectasis": 2,
+    "cardiomegaly": 2,
+    "chronic_pulmonary_embolism": 2,
+    "copd_emphysema": 2,
+    "interlobular_septal_thickening": 2,
+    "vertebral_compression_fracture": 2,
+    # Tier 1 — Low/incidental: degenerative, rarely changes management
+    "aortic_atherosclerosis": 1,
+    "aortic_valve_calcification": 1,
+    "coronary_artery_calcifications": 1,
+    "prior_myocardial_infarction": 1,
+    "neck_base": 1,
+    "upper_abdomen": 1,
+}
+
 SYSTEM_PROMPT = """\
 You are an expert radiologist performing structured extraction of findings from CT chest reports.
 Classify each finding strictly from the report body and impression.
@@ -220,6 +254,25 @@ def compute_classification_metrics(tp: int, fp: int, fn: int, tn: int) -> dict[s
     }
 
 
+def compute_weighted_metrics(
+    ref_set: set[str],
+    hyp_set: set[str],
+    weights: dict[str, int],
+) -> dict[str, float]:
+    """Compute clinically-weighted precision, recall, F1.
+
+    Each TP/FP/FN contributes its finding's clinical weight instead of 1.
+    """
+    tp_w = sum(weights.get(f, 1) for f in ref_set & hyp_set)
+    fp_w = sum(weights.get(f, 1) for f in hyp_set - ref_set)
+    fn_w = sum(weights.get(f, 1) for f in ref_set - hyp_set)
+
+    p = tp_w / (tp_w + fp_w) if (tp_w + fp_w) else 0.0
+    r = tp_w / (tp_w + fn_w) if (tp_w + fn_w) else 0.0
+    f = 2 * p * r / (p + r) if (p + r) else 0.0
+    return {"weighted_precision": p, "weighted_recall": r, "weighted_f1": f}
+
+
 def process_study(
     ref: str,
     hyp: str,
@@ -231,12 +284,16 @@ def process_study(
     hyp_present, c2 = extract_positive_findings(hyp, model)
 
     metrics = compute_metrics(ref_present, hyp_present)
+    weighted = compute_weighted_metrics(ref_present, hyp_present, CLINICAL_WEIGHTS)
 
     return {
         "study_id": study_id,
         "finding_f1": metrics["f1"],
         "finding_precision": metrics["precision"],
         "finding_recall": metrics["recall"],
+        "weighted_f1": weighted["weighted_f1"],
+        "weighted_precision": weighted["weighted_precision"],
+        "weighted_recall": weighted["weighted_recall"],
         "ref_findings": sorted(ref_present),
         "hyp_findings": sorted(hyp_present),
         "tp": metrics["tp"],
@@ -294,6 +351,9 @@ class FindingF1CTC:
         all_f1 = [s["finding_f1"] for s in per_sample.values()]
         all_precision = [s["finding_precision"] for s in per_sample.values()]
         all_recall = [s["finding_recall"] for s in per_sample.values()]
+        all_weighted_f1 = [s["weighted_f1"] for s in per_sample.values()]
+        all_weighted_precision = [s["weighted_precision"] for s in per_sample.values()]
+        all_weighted_recall = [s["weighted_recall"] for s in per_sample.values()]
 
         # Per-finding confusion matrix across all 25 findings
         valid_findings = set(ALL_FINDINGS)
@@ -326,6 +386,29 @@ class FindingF1CTC:
         macro_ppv = sum(m["ppv"] for m in per_finding_metrics.values()) / n_findings if n_findings else 0.0
         macro_npv = sum(m["npv"] for m in per_finding_metrics.values()) / n_findings if n_findings else 0.0
 
+        # Weighted macro-average: each finding's F1 is weighted by clinical urgency
+        total_weight = sum(CLINICAL_WEIGHTS.get(f, 1) for f in per_finding_metrics)
+        weighted_macro_f1 = (
+            sum(CLINICAL_WEIGHTS.get(f, 1) * m["f1"] for f, m in per_finding_metrics.items()) / total_weight
+            if total_weight else 0.0
+        )
+        weighted_macro_sens = (
+            sum(CLINICAL_WEIGHTS.get(f, 1) * m["sensitivity"] for f, m in per_finding_metrics.items()) / total_weight
+            if total_weight else 0.0
+        )
+        weighted_macro_spec = (
+            sum(CLINICAL_WEIGHTS.get(f, 1) * m["specificity"] for f, m in per_finding_metrics.items()) / total_weight
+            if total_weight else 0.0
+        )
+        weighted_macro_ppv = (
+            sum(CLINICAL_WEIGHTS.get(f, 1) * m["ppv"] for f, m in per_finding_metrics.items()) / total_weight
+            if total_weight else 0.0
+        )
+        weighted_macro_npv = (
+            sum(CLINICAL_WEIGHTS.get(f, 1) * m["npv"] for f, m in per_finding_metrics.items()) / total_weight
+            if total_weight else 0.0
+        )
+
         # Micro-average (aggregate all TP/FP/FN/TN first)
         total_tp = sum(m["tp"] for m in per_finding_metrics.values())
         total_fp = sum(m["fp"] for m in per_finding_metrics.values())
@@ -333,21 +416,41 @@ class FindingF1CTC:
         total_tn = sum(m["tn"] for m in per_finding_metrics.values())
         micro = compute_classification_metrics(total_tp, total_fp, total_fn, total_tn)
 
+        # Weighted micro-average: TP/FP/FN/TN scaled by clinical weight before aggregation
+        w_tp = sum(CLINICAL_WEIGHTS.get(f, 1) * m["tp"] for f, m in per_finding_metrics.items())
+        w_fp = sum(CLINICAL_WEIGHTS.get(f, 1) * m["fp"] for f, m in per_finding_metrics.items())
+        w_fn = sum(CLINICAL_WEIGHTS.get(f, 1) * m["fn"] for f, m in per_finding_metrics.items())
+        w_tn = sum(CLINICAL_WEIGHTS.get(f, 1) * m["tn"] for f, m in per_finding_metrics.items())
+        weighted_micro = compute_classification_metrics(w_tp, w_fp, w_fn, w_tn)
+
         return {
             "aggregate": {
                 "finding_f1": sum(all_f1) / len(all_f1) if all_f1 else 0.0,
                 "finding_precision": sum(all_precision) / len(all_precision) if all_precision else 0.0,
                 "finding_recall": sum(all_recall) / len(all_recall) if all_recall else 0.0,
+                "weighted_finding_f1": sum(all_weighted_f1) / len(all_weighted_f1) if all_weighted_f1 else 0.0,
+                "weighted_finding_precision": sum(all_weighted_precision) / len(all_weighted_precision) if all_weighted_precision else 0.0,
+                "weighted_finding_recall": sum(all_weighted_recall) / len(all_weighted_recall) if all_weighted_recall else 0.0,
                 "macro_f1": macro_f1,
                 "macro_sensitivity": macro_sens,
                 "macro_specificity": macro_spec,
                 "macro_ppv": macro_ppv,
                 "macro_npv": macro_npv,
+                "weighted_macro_f1": weighted_macro_f1,
+                "weighted_macro_sensitivity": weighted_macro_sens,
+                "weighted_macro_specificity": weighted_macro_spec,
+                "weighted_macro_ppv": weighted_macro_ppv,
+                "weighted_macro_npv": weighted_macro_npv,
                 "micro_f1": micro["f1"],
                 "micro_sensitivity": micro["sensitivity"],
                 "micro_specificity": micro["specificity"],
                 "micro_ppv": micro["ppv"],
                 "micro_npv": micro["npv"],
+                "weighted_micro_f1": weighted_micro["f1"],
+                "weighted_micro_sensitivity": weighted_micro["sensitivity"],
+                "weighted_micro_specificity": weighted_micro["specificity"],
+                "weighted_micro_ppv": weighted_micro["ppv"],
+                "weighted_micro_npv": weighted_micro["npv"],
                 "micro_tp": micro["tp"],
                 "micro_fp": micro["fp"],
                 "micro_fn": micro["fn"],

@@ -7,7 +7,8 @@ class FindingF1CTCMetric(MetricBase):
     """Finding-level F1 extraction and evaluation for CT Chest (25 findings).
 
     Uses the C1/C2/C3 taxonomy with 23 findings + 2 region assessments.
-    Returns per-sample F1/precision/recall, aggregate metrics, and per-finding confusion matrices.
+    Includes clinically-weighted metrics where critical findings (e.g. PE, pneumothorax)
+    contribute more to the score than incidental findings.
     """
 
     name = "finding_f1_ctc"
@@ -26,16 +27,29 @@ class FindingF1CTCMetric(MetricBase):
             "finding_f1",
             "finding_precision",
             "finding_recall",
+            "weighted_finding_f1",
+            "weighted_finding_precision",
+            "weighted_finding_recall",
             "macro_f1",
             "macro_sensitivity",
             "macro_specificity",
             "macro_ppv",
             "macro_npv",
+            "weighted_macro_f1",
+            "weighted_macro_sensitivity",
+            "weighted_macro_specificity",
+            "weighted_macro_ppv",
+            "weighted_macro_npv",
             "micro_f1",
             "micro_sensitivity",
             "micro_specificity",
             "micro_ppv",
             "micro_npv",
+            "weighted_micro_f1",
+            "weighted_micro_sensitivity",
+            "weighted_micro_specificity",
+            "weighted_micro_ppv",
+            "weighted_micro_npv",
         ]
         if detailed:
             keys.extend([
@@ -54,70 +68,63 @@ class FindingF1CTCMetric(MetricBase):
 
         # Extract per-sample scores
         per_sample_scores = {}
-        for key in ["finding_f1", "finding_precision", "finding_recall"]:
+        for key in ["finding_f1", "finding_precision", "finding_recall",
+                    "weighted_f1", "weighted_precision", "weighted_recall"]:
             per_sample_scores[key] = [
                 s[key] for s in result["per_sample"].values()
             ]
 
+        agg = result["aggregate"]
+
         return {
             "finding_f1": {
-                "aggregate": result["aggregate"]["finding_f1"],
+                "aggregate": agg["finding_f1"],
                 "per_sample": per_sample_scores["finding_f1"],
             },
             "finding_precision": {
-                "aggregate": result["aggregate"]["finding_precision"],
+                "aggregate": agg["finding_precision"],
                 "per_sample": per_sample_scores["finding_precision"],
             },
             "finding_recall": {
-                "aggregate": result["aggregate"]["finding_recall"],
+                "aggregate": agg["finding_recall"],
                 "per_sample": per_sample_scores["finding_recall"],
             },
-            "macro_f1": {
-                "aggregate": result["aggregate"]["macro_f1"],
+            "weighted_finding_f1": {
+                "aggregate": agg["weighted_finding_f1"],
+                "per_sample": per_sample_scores["weighted_f1"],
             },
-            "macro_sensitivity": {
-                "aggregate": result["aggregate"]["macro_sensitivity"],
+            "weighted_finding_precision": {
+                "aggregate": agg["weighted_finding_precision"],
+                "per_sample": per_sample_scores["weighted_precision"],
             },
-            "macro_specificity": {
-                "aggregate": result["aggregate"]["macro_specificity"],
+            "weighted_finding_recall": {
+                "aggregate": agg["weighted_finding_recall"],
+                "per_sample": per_sample_scores["weighted_recall"],
             },
-            "macro_ppv": {
-                "aggregate": result["aggregate"]["macro_ppv"],
-            },
-            "macro_npv": {
-                "aggregate": result["aggregate"]["macro_npv"],
-            },
-            "micro_f1": {
-                "aggregate": result["aggregate"]["micro_f1"],
-            },
-            "micro_sensitivity": {
-                "aggregate": result["aggregate"]["micro_sensitivity"],
-            },
-            "micro_specificity": {
-                "aggregate": result["aggregate"]["micro_specificity"],
-            },
-            "micro_ppv": {
-                "aggregate": result["aggregate"]["micro_ppv"],
-            },
-            "micro_npv": {
-                "aggregate": result["aggregate"]["micro_npv"],
-            },
-            "micro_tp": {
-                "aggregate": result["aggregate"]["micro_tp"],
-            },
-            "micro_fp": {
-                "aggregate": result["aggregate"]["micro_fp"],
-            },
-            "micro_fn": {
-                "aggregate": result["aggregate"]["micro_fn"],
-            },
-            "micro_tn": {
-                "aggregate": result["aggregate"]["micro_tn"],
-            },
-            "n_findings": {
-                "aggregate": result["aggregate"]["n_findings"],
-            },
-            "total_cost_usd": {
-                "aggregate": result["aggregate"]["total_cost_usd"],
-            },
+            "macro_f1": {"aggregate": agg["macro_f1"]},
+            "macro_sensitivity": {"aggregate": agg["macro_sensitivity"]},
+            "macro_specificity": {"aggregate": agg["macro_specificity"]},
+            "macro_ppv": {"aggregate": agg["macro_ppv"]},
+            "macro_npv": {"aggregate": agg["macro_npv"]},
+            "weighted_macro_f1": {"aggregate": agg["weighted_macro_f1"]},
+            "weighted_macro_sensitivity": {"aggregate": agg["weighted_macro_sensitivity"]},
+            "weighted_macro_specificity": {"aggregate": agg["weighted_macro_specificity"]},
+            "weighted_macro_ppv": {"aggregate": agg["weighted_macro_ppv"]},
+            "weighted_macro_npv": {"aggregate": agg["weighted_macro_npv"]},
+            "micro_f1": {"aggregate": agg["micro_f1"]},
+            "micro_sensitivity": {"aggregate": agg["micro_sensitivity"]},
+            "micro_specificity": {"aggregate": agg["micro_specificity"]},
+            "micro_ppv": {"aggregate": agg["micro_ppv"]},
+            "micro_npv": {"aggregate": agg["micro_npv"]},
+            "weighted_micro_f1": {"aggregate": agg["weighted_micro_f1"]},
+            "weighted_micro_sensitivity": {"aggregate": agg["weighted_micro_sensitivity"]},
+            "weighted_micro_specificity": {"aggregate": agg["weighted_micro_specificity"]},
+            "weighted_micro_ppv": {"aggregate": agg["weighted_micro_ppv"]},
+            "weighted_micro_npv": {"aggregate": agg["weighted_micro_npv"]},
+            "micro_tp": {"aggregate": agg["micro_tp"]},
+            "micro_fp": {"aggregate": agg["micro_fp"]},
+            "micro_fn": {"aggregate": agg["micro_fn"]},
+            "micro_tn": {"aggregate": agg["micro_tn"]},
+            "n_findings": {"aggregate": agg["n_findings"]},
+            "total_cost_usd": {"aggregate": agg["total_cost_usd"]},
         }
