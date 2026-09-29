@@ -11,6 +11,7 @@ BATCH_SIZE_METRICS = {
     "bertscore": 64,
     "f1chexbert": 64,
     "f1radbert_ct": 16,
+    "radeval_bertscore": 64,
     "srrbert": 4,
     "ratescore": 1,
     "green": 8,
