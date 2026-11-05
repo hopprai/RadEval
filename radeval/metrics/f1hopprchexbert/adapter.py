@@ -29,12 +29,12 @@ class F1HopprCheXbertMetric(MetricBase):
                 on_progress=None):
         """Override: per_sample mode returns different keys than default."""
         if per_sample:
-            (_, _, cr_all, cr_5, sample_acc_full, sample_acc_5,
+            (_, _, _, _, sample_acc_full, sample_acc_5,
              pred_all, true_all, pred_5, true_5) = self._scorer.forward(
                 hyps, refs, on_batch_done=on_progress, return_label_matrices=True)
-            # Label matrices ride the per-sample channel (one row per study) so a
-            # caller can bootstrap a corpus-F1 CI. `_all` is the 27-condition set
-            # matching *_all_micro_f1; `_5` is the top-5 set matching *_5_micro_f1.
+            # Per-study 0/1 label matrices (row i = study i), from which the
+            # *_f1 scores are computed. `_all` columns follow TARGET_NAMES
+            # (CONDITION_NAMES + no_finding); `_5` columns follow TOP5.
             return {
                 "f1hopprchexbert_sample_acc_5": (
                     sample_acc_5.tolist() if hasattr(sample_acc_5, 'tolist')

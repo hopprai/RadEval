@@ -185,9 +185,8 @@ class BaseCheXbertEvaluator(nn.Module):
         )
 
         if return_label_matrices:
-            # Per-study predicted/true label matrices for both the all-condition and
-            # top-5 sets, so a caller can bootstrap a corpus-F1 CI (mirrors the
-            # f1*_ct scorers' return_label_matrices contract).
+            # Per-study predicted/true label matrices (rows follow input order;
+            # columns TARGET_NAMES and TOP5), e.g. to bootstrap a corpus-F1 CI.
             return (accuracy, pe_accuracy, cr, cr5, sample_label_acc_full, sample_label_acc_5,
                     y_pred_full.tolist(), y_true_full.tolist(), y_pred5.tolist(), y_true5.tolist())
         return accuracy, pe_accuracy, cr, cr5, sample_label_acc_full, sample_label_acc_5
