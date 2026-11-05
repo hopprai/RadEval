@@ -30,3 +30,18 @@ def test_green_scorer_ctor_accepts_batch_size():
     sig = inspect.signature(GREEN.__init__)
     assert "batch_size" in sig.parameters
     assert sig.parameters["batch_size"].default == 8
+
+
+def test_radeval_bertscore_forwards_batch_size(monkeypatch):
+    import radeval.metrics.bertscore.bertscore as bs_mod
+
+    seen = {}
+
+    class _StubBERTScorer:
+        def __init__(self, **kwargs):
+            seen.update(kwargs)
+
+    monkeypatch.setattr(bs_mod, "BERTScorer", _StubBERTScorer)
+    metric = get_metric_class("radeval_bertscore")(batch_size=7)
+    assert seen["batch_size"] == 7
+    assert metric._scorer.batch_size == 7
