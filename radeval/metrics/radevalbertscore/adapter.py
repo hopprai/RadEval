@@ -5,13 +5,14 @@ class RadEvalBertScoreMetric(MetricBase):
     name = "radeval_bertscore"
     display_name = "RadEval-BERTScore"
 
-    def __init__(self):
+    def __init__(self, batch_size=64):
         from .radevalbertscore import RadEvalBERTScorer
         self._scorer = RadEvalBERTScorer(
             model_type="IAMJB/RadEvalModernBERT",
             num_layers=22,
             use_fast_tokenizer=True,
-            rescale_with_baseline=False)
+            rescale_with_baseline=False,
+            batch_size=batch_size)
 
     def metric_keys(self, detailed=False):
         return ["radeval_bertscore"]
