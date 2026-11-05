@@ -85,3 +85,44 @@ def test_f1hopprchexbert_per_sample():
         for val in results[key]:
             assert isinstance(val, (int, float))
             assert 0.0 <= val <= 1.0
+
+
+def test_f1hopprchexbert_per_sample_label_matrices():
+    """per_sample exposes per-study label matrices; corpus F1 recomputed from
+    them equals the reported F1, and rows follow input order across batches."""
+    from sklearn.metrics import f1_score
+    from radeval.metrics.f1hopprchexbert.adapter import F1HopprCheXbertMetric
+    from tests.conftest import CHEXBERT_HYPS, CHEXBERT_REFS
+
+    metric = F1HopprCheXbertMetric()
+    metric._scorer.batch_size = 2  # force several batches
+    n = len(CHEXBERT_REFS)
+
+    ps = metric.compute(CHEXBERT_REFS, CHEXBERT_HYPS, per_sample=True)
+    detailed = metric.compute(CHEXBERT_REFS, CHEXBERT_HYPS, detailed=True)
+
+    n_all = len(HopprF1CheXbert.CONDITION_NAMES) + 1
+    n_top = len(HopprF1CheXbert.TOP5)
+    for subset, width in (("all", n_all), ("5", n_top)):
+        y_pred = np.array(ps[f"f1hopprchexbert_{subset}_pred_labels"])
+        y_true = np.array(ps[f"f1hopprchexbert_{subset}_true_labels"])
+        assert y_pred.shape == y_true.shape == (n, width)
+        assert set(np.unique(np.concatenate([y_pred, y_true]))) <= {0, 1}
+        for avg in ("micro", "macro", "weighted"):
+            assert f1_score(y_true, y_pred, average=avg, zero_division=0) == \
+                pytest.approx(detailed[f"f1hopprchexbert_{subset}_{avg}_f1"])
+        np.testing.assert_allclose(
+            (y_pred == y_true).mean(axis=1),
+            ps[f"f1hopprchexbert_sample_acc_{subset}"])
+
+    # Top-5 columns are the TOP5 slice of the all-condition matrix.
+    target_names = HopprF1CheXbert.CONDITION_NAMES + [HopprF1CheXbert.NO_FINDING]
+    top_idx = [target_names.index(c) for c in HopprF1CheXbert.TOP5]
+    assert np.array_equal(
+        np.array(ps["f1hopprchexbert_all_pred_labels"])[:, top_idx],
+        np.array(ps["f1hopprchexbert_5_pred_labels"]))
+
+    # Row i belongs to study i: reversing the input reverses the rows.
+    ps_rev = metric.compute(CHEXBERT_REFS[::-1], CHEXBERT_HYPS[::-1], per_sample=True)
+    for k in ("f1hopprchexbert_all_pred_labels", "f1hopprchexbert_all_true_labels"):
+        assert ps_rev[k] == ps[k][::-1]
