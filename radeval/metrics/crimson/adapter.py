@@ -8,13 +8,16 @@ class CrimsonMetric(MetricBase):
 
     def __init__(self, provider="hf", model_name=None, openai_api_key=None,
                  gemini_api_key=None, batch_size=1, max_concurrent=50,
-                 cache_dir=None):
+                 cache_dir=None, temperature=0.0, max_output_tokens=8192,
+                 thinking_level="minimal"):
         from .crimson import CRIMSON
         self._scorer = CRIMSON(
             provider=provider, model_name=model_name,
             openai_api_key=openai_api_key, gemini_api_key=gemini_api_key,
             batch_size=batch_size, max_concurrent=max_concurrent,
             cache_dir=cache_dir,
+            temperature=temperature, max_output_tokens=max_output_tokens,
+            thinking_level=thinking_level,
         )
 
     @property

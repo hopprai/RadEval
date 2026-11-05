@@ -238,6 +238,27 @@ class HopprCrimsonCthSv001(LLMMetricBase):
         }
 
     # ------------------------------------------------------------------
+    # Per-sample failure isolation: a sample that fails every retry scores
+    # NaN (excluded from the mean) instead of aborting the batch.
+    # ------------------------------------------------------------------
+
+    def _evaluate_one(self, ref, hyp, max_retries=2, **kwargs):
+        try:
+            return super()._evaluate_one(
+                ref, hyp, max_retries=max_retries, **kwargs)
+        except RuntimeError as e:
+            logger.error("hoppr_crimson_cth_sv001: sample scored NaN: %s", e)
+            return {"crimson_cth_score": float("nan")}
+
+    async def _evaluate_one_async(self, ref, hyp, max_retries=2, **kwargs):
+        try:
+            return await super()._evaluate_one_async(
+                ref, hyp, max_retries=max_retries, **kwargs)
+        except RuntimeError as e:
+            logger.error("hoppr_crimson_cth_sv001: sample scored NaN: %s", e)
+            return {"crimson_cth_score": float("nan")}
+
+    # ------------------------------------------------------------------
     # Aggregation
     # ------------------------------------------------------------------
 

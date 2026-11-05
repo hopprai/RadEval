@@ -171,6 +171,27 @@ class TestCrimsonUnit:
         assert request["contents"]
         assert request["config"].response_mime_type == "application/json"
         assert request["config"].temperature == 0
+        assert request["config"].response_json_schema is not None
+        assert request["config"].thinking_config.thinking_level == "MINIMAL"
+
+    def test_gemini_thinking_level_none_omits_thinking_config(
+            self, mock_gemini_client):
+        from radeval.metrics.crimson import CRIMSONScore
+
+        scorer = CRIMSONScore(
+            provider="gemini", gemini_api_key="test-key", thinking_level=None)
+        request = scorer._build_request(refs[0], hyps[0])
+        assert request["config"].thinking_config is None
+
+    def test_gemini_single_evaluate(self, mock_gemini_client):
+        from radeval.metrics.crimson import CRIMSONScore
+
+        scorer = CRIMSONScore(provider="gemini", gemini_api_key="test-key")
+        scorer._chat_completion = MagicMock(
+            return_value=json.dumps(mock_evaluations[0])
+        )
+        result = scorer._evaluate_one(refs[0], hyps[0])
+        assert result["crimson_score"] == 1.0
 
     def test_hf_initialization_default_model(self, mock_hf_pipeline):
         """Test that HF initialization uses correct default model."""
