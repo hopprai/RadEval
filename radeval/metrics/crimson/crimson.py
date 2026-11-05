@@ -324,10 +324,14 @@ class CRIMSONScore(LLMMetricBase):
         elif self.provider == "gemini":
             from google.genai import types
 
-            thinking_level = getattr(
-                types.ThinkingLevel,
-                str(self.thinking_level).upper(),
-            )
+            # thinking_level=None omits thinking_config (models without
+            # thinking-level support, e.g. Gemini 2.x).
+            thinking_config = None
+            if self.thinking_level is not None:
+                thinking_config = types.ThinkingConfig(
+                    thinking_level=types.ThinkingLevel(
+                        str(self.thinking_level).upper()),
+                )
             return {
                 "contents": prompt,
                 "config": types.GenerateContentConfig(
@@ -336,9 +340,7 @@ class CRIMSONScore(LLMMetricBase):
                     max_output_tokens=self.max_output_tokens,
                     response_mime_type="application/json",
                     response_json_schema=_CRIMSON_RESPONSE_SCHEMA,
-                    thinking_config=types.ThinkingConfig(
-                        thinking_level=thinking_level,
-                    ),
+                    thinking_config=thinking_config,
                 ),
             }
         else:

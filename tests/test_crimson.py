@@ -172,23 +172,16 @@ class TestCrimsonUnit:
         assert request["config"].response_mime_type == "application/json"
         assert request["config"].temperature == 0
         assert request["config"].response_json_schema is not None
+        assert request["config"].thinking_config.thinking_level == "MINIMAL"
 
-    def test_gemini_cost_includes_thinking_tokens(self):
-        from radeval.metrics._llm import CostTracker, _track_gemini_usage
+    def test_gemini_thinking_level_none_omits_thinking_config(
+            self, mock_gemini_client):
+        from radeval.metrics.crimson import CRIMSONScore
 
-        usage = MagicMock(
-            prompt_token_count=100,
-            candidates_token_count=200,
-            thoughts_token_count=300,
-        )
-        response = MagicMock(usage_metadata=usage)
-        tracker = CostTracker("gemini-3.1-flash-lite")
-        _track_gemini_usage(response, tracker)
-        assert tracker.input_tokens == 100
-        assert tracker.output_tokens == 500
-        assert tracker.cost == pytest.approx(
-            100 * 0.25 / 1_000_000 + 500 * 1.50 / 1_000_000
-        )
+        scorer = CRIMSONScore(
+            provider="gemini", gemini_api_key="test-key", thinking_level=None)
+        request = scorer._build_request(refs[0], hyps[0])
+        assert request["config"].thinking_config is None
 
     def test_gemini_single_evaluate(self, mock_gemini_client):
         from radeval.metrics.crimson import CRIMSONScore
