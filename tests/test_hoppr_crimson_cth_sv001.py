@@ -4,6 +4,7 @@ Unit tests mock the Gemini judge (no live API). Integration tests require
 GEMINI_API_KEY / GOOGLE_API_KEY and are marked with @pytest.mark.integration.
 """
 import json
+import math
 import os
 from unittest.mock import AsyncMock, patch
 
@@ -131,6 +132,20 @@ class TestHopprCrimsonCthUnit:
             return_value=json.dumps(mock_eval_different))
         mean, std, scores, df = scorer(REFS_DIFFERENT, HYPS_DIFFERENT)
         assert mean < 0
+
+    def test_failed_sample_is_nan_not_fatal(self):
+        """A sample that fails every retry scores NaN; the rest still score."""
+        scorer = _make_scorer()
+        good = json.dumps(mock_eval_identical)
+        # 3 attempts per sample: first sample succeeds, second never parses.
+        scorer._chat_completion_async = AsyncMock(
+            side_effect=[good, "not json", "not json", "not json"])
+        scorer.max_concurrent = 1
+        mean, std, scores, df = scorer(REFS_IDENTICAL * 2, HYPS_IDENTICAL * 2)
+        assert mean == 1.0
+        assert scores[0] == 1.0
+        assert math.isnan(scores[1])
+        assert len(df) == 2
 
     def test_error_totals(self):
         scorer = _make_scorer()

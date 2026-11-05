@@ -129,6 +129,20 @@ class TestHopprModifierCthUnit:
         assert mean == 0.5
         assert "severity_errors" in df.columns
 
+    def test_failed_sample_is_nan_not_fatal(self):
+        """A sample that fails every retry scores NaN; the rest still score."""
+        scorer = _make_scorer()
+        good = json.dumps(mock_eval_all_correct)
+        # 3 attempts per sample: first sample succeeds, second never parses.
+        scorer._chat_completion_async = AsyncMock(
+            side_effect=[good, "not json", "not json", "not json"])
+        scorer.max_concurrent = 1
+        mean, std, scores, df = scorer(REFS * 2, HYPS * 2)
+        assert mean == 1.0
+        assert scores[0] == 1.0
+        assert math.isnan(scores[1])
+        assert len(df) == 2
+
     def test_error_totals(self):
         scorer = _make_scorer()
         scorer._chat_completion_async = AsyncMock(

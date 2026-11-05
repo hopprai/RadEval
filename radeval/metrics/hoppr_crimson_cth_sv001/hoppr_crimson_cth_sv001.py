@@ -238,16 +238,34 @@ class HopprCrimsonCthSv001(LLMMetricBase):
         }
 
     # ------------------------------------------------------------------
+    # Per-sample failure isolation: a sample that fails every retry scores
+    # NaN (excluded from the mean) instead of aborting the batch.
+    # ------------------------------------------------------------------
+
+    def _evaluate_one(self, ref, hyp, max_retries=2, **kwargs):
+        try:
+            return super()._evaluate_one(
+                ref, hyp, max_retries=max_retries, **kwargs)
+        except RuntimeError as e:
+            logger.error("hoppr_crimson_cth_sv001: sample scored NaN: %s", e)
+            return {"crimson_cth_score": float("nan")}
+
+    async def _evaluate_one_async(self, ref, hyp, max_retries=2, **kwargs):
+        try:
+            return await super()._evaluate_one_async(
+                ref, hyp, max_retries=max_retries, **kwargs)
+        except RuntimeError as e:
+            logger.error("hoppr_crimson_cth_sv001: sample scored NaN: %s", e)
+            return {"crimson_cth_score": float("nan")}
+
+    # ------------------------------------------------------------------
     # Aggregation
     # ------------------------------------------------------------------
 
     def _aggregate(
         self, results: list[dict], refs: list[str], hyps: list[str],
     ) -> tuple:
-        scores = [
-            r["crimson_cth_score"] if "__error__" not in r else float("nan")
-            for r in results
-        ]
+        scores = [r["crimson_cth_score"] for r in results]
 
         valid = [s for s in scores if s is not None and not np.isnan(s)]
         mean = float(np.mean(valid)) if valid else float("nan")
